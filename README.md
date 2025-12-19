@@ -268,7 +268,8 @@ skylink/
 ├── scripts/                 # PKI & utility scripts
 ├── tests/                   # Test suite
 ├── docs/                    # Documentation
-│   └── DEMO.md              # Demo guide
+│   ├── DEMO.md              # Demo guide
+│   └── TECHNICAL_DOCUMENTATION.md  # Technical documentation
 ├── Dockerfile.*             # Multi-stage Dockerfiles (non-root user)
 ├── docker-compose.yml       # Orchestration
 └── .gitlab-ci.yml           # CI/CD pipeline
@@ -278,7 +279,8 @@ skylink/
 
 ## Documentation
 
-See [docs/DEMO.md](docs/DEMO.md) for a step-by-step demonstration walkthrough.
+- [docs/DEMO.md](docs/DEMO.md) — Step-by-step demonstration walkthrough
+- [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) — Complete technical documentation (architecture, security, CI/CD, RRA compliance)
 
 ---
 
