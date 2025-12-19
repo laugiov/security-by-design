@@ -1,0 +1,32 @@
+# Ruff configuration for SkyLink
+
+# Extend line length to 120 (common for modern projects)
+line-length = 120
+
+# Exclude directories
+exclude = [
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".git",
+    "htmlcov",
+    ".cache",
+]
+
+[lint]
+# Select rules to check
+select = ["E", "F", "B", "I"]
+
+# Ignore specific rules
+ignore = [
+    "B008",  # FastAPI uses function calls in defaults (Query, Header, etc.)
+    "B904",  # Allow bare raise in except blocks (common pattern)
+    "S105",  # Not hardcoded passwords - these are test values or variable names
+    "S106",  # Not hardcoded passwords - these are parameter names
+    "N806",  # Allow uppercase variables in tests
+]
+
+[lint.per-file-ignores]
+# Test files can have additional flexibility
+"tests/**/*.py" = ["S105", "S106", "N806"]
+"scripts/**/*.py" = ["F841"]  # Allow unused variables in scripts

@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  title: SkyLink - Common Schemas
+  version: 1.0.0
+  description: |
+    Shared schemas and components used across all SkyLink microservices.
+    This file contains common error structures, health check responses, and authentication models.
+
+components:
+  schemas:
+    # Common Error Schema
+    Error:
+      type: object
+      required: [error]
+      additionalProperties: false
+      description: Standard error envelope used across all services.
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              description: |
+                Machine-readable error code.
+                Possible values: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN,
+                RATE_LIMIT_EXCEEDED, PROVIDER_UNAVAILABLE, INTERNAL_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error message.
+              example: Invalid input data
+            details:
+              type: object
+              nullable: true
+              description: Optional structured details for validation errors.
+              properties:
+                fields:
+                  type: array
+                  description: Per-field validation issues
+                  items:
+                    $ref: '#/components/schemas/ErrorFieldDetail'
+
+    # Error Field Detail
+    ErrorFieldDetail:
+      type: object
+      additionalProperties: false
+      description: Detailed validation error for a specific field.
+      properties:
+        field:
+          type: string
+          description: Name of the field that failed validation
+          example: lat
+        issue:
+          type: string
+          description: Type of validation issue
+          example: range
+        message:
+          type: string
+          description: Human-readable error message
+          example: lat must be between -90 and 90
+
+    # Common Health Check Response
+    HealthCheckResponse:
+      type: object
+      required: [status, service]
+      additionalProperties: false
+      description: Standard health check response for all services.
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Health status of the service
+          example: healthy
+        service:
+          type: string
+          description: Name of the service
+          example: skylink
+        version:
+          type: string
+          description: Service version (optional)
+          example: "0.1.0"
+
+    # Common Token Request
+    TokenRequest:
+      type: object
+      required: [vehicle_id]
+      additionalProperties: false
+      description: Standard authentication token request.
+      properties:
+        vehicle_id:
+          type: string
+          format: uuid
+          description: Unique identifier of the vehicle/client
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    # Common Token Response
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      additionalProperties: false
+      description: Standard JWT token response.
+      properties:
+        access_token:
+          type: string
+          description: JWT access token (RS256 signed)
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          enum: [Bearer]
+          description: Token type (always Bearer for JWT)
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds
+          minimum: 1
+          maximum: 900
+          example: 900
+
+  responses:
+    # Common Responses
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Invalid input data"
+
+    Unauthorized:
+      description: Unauthorized - invalid or expired JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Invalid or expired token"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "Insufficient permissions"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "RATE_LIMIT_EXCEEDED"
+              message: "Too many requests"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An unexpected error occurred"
+
+    ServiceUnavailable:
+      description: Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "SERVICE_UNAVAILABLE"
+              message: "Service temporarily unavailable"
+
+  securitySchemes:
+    # Common Security Schemes
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with RS256 signature.
+        Standard claims: sub (vehicle_id), aud (service name), iat, exp (max 15 min)

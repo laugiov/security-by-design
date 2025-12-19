@@ -1,0 +1,111 @@
+# SkyLink - Docker Compose Configuration
+# Launch all services with: docker compose up -d
+
+services:
+  # API Gateway - Main entry point (port 8000)
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - PRIVATE_KEY_PEM=${PRIVATE_KEY_PEM}
+      - PUBLIC_KEY_PEM=${PUBLIC_KEY_PEM}
+      - TELEMETRY_SERVICE_URL=http://telemetry:8001
+      - WEATHER_SERVICE_URL=http://weather:8002
+      - CONTACTS_SERVICE_URL=http://contacts:8003
+    depends_on:
+      telemetry:
+        condition: service_healthy
+      weather:
+        condition: service_healthy
+      contacts:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - skylink-net
+
+  # Telemetry Service - Vehicle telemetry ingestion (port 8001)
+  telemetry:
+    build:
+      context: .
+      dockerfile: Dockerfile.telemetry
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - PUBLIC_KEY_PEM=${PUBLIC_KEY_PEM}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - skylink-net
+
+  # Weather Service - Weather data (port 8002)
+  weather:
+    build:
+      context: .
+      dockerfile: Dockerfile.weather
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - DEMO_MODE=true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - skylink-net
+
+  # Contacts Service - Google contacts integration (port 8003)
+  contacts:
+    build:
+      context: .
+      dockerfile: Dockerfile.contacts
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - DEMO_MODE=true
+      - DATABASE_URL=postgresql://skylink:skylink@db:5432/skylink
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - skylink-net
+
+  # PostgreSQL Database - For contacts OAuth tokens
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=skylink
+      - POSTGRES_PASSWORD=skylink
+      - POSTGRES_DB=skylink
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skylink -d skylink"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - skylink-net
+
+networks:
+  skylink-net:
+    driver: bridge

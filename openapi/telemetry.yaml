@@ -1,0 +1,355 @@
+openapi: 3.0.3
+info:
+  title: SkyLink - Telemetry Service API
+  version: 1.0.0
+  description: |
+    Internal microservice handling vehicle telemetry ingestion with idempotency.
+    Includes Auth and Health endpoints.
+servers:
+  - url: http://telemetry:8001
+    description: Telemetry service (cluster-internal)
+  - url: https://telemetry.skylink.internal
+    description: Telemetry service (internal TLS)
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: telemetry
+    description: Vehicle telemetry data ingestion
+  - name: health
+    description: Health check endpoints
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns the health status of the telemetry service
+      operationId: telemetry.healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: telemetry
+  /auth/token:
+    post:
+      tags: [auth]
+      summary: Obtain JWT token
+      description: |
+        Authenticate a vehicle/client and receive a JWT access token.
+        Token is valid for 15 minutes maximum.
+      operationId: telemetry.obtainToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id]
+              additionalProperties: false
+              properties:
+                vehicle_id:
+                  type: string
+                  format: uuid
+                  description: Unique identifier of the vehicle
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: JWT token issued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type, expires_in]
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token (RS256 signed)
+                    example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    enum: [Bearer]
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    description: Token lifetime in seconds
+                    example: 900
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /telemetry:
+    post:
+      tags: [telemetry]
+      summary: Ingest telemetry event
+      description: |
+        Store vehicle telemetry data with idempotency guarantee.
+        Idempotency key: (vehicle_id, event_id)
+      operationId: telemetry.ingestTelemetry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryEvent'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: created
+                  event_id:
+                    type: string
+                    format: uuid
+        '200':
+          description: Idempotent duplicate (event already exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: duplicate
+                  event_id:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Conflict - same event_id with different data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload too large (max 64KB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtenu via la Gateway (POST /auth/token).
+        Claims: sub (vehicle_id), aud=skylink, iat, exp (max 15 min)
+  schemas:
+    TelemetryEvent:
+      type: object
+      required: [event_id, vehicle_id, ts, metrics]
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique event identifier (UUIDv7 recommended)
+          example: "01936d9f-8f5a-7a3e-9c1d-2b3f4c5d6e7f"
+        vehicle_id:
+          type: string
+          format: uuid
+          description: Vehicle identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        ts:
+          type: string
+          format: date-time
+          description: Event timestamp (ISO 8601 UTC)
+          example: "2025-01-15T10:30:00Z"
+        metrics:
+          type: object
+          additionalProperties: false
+          description: Complete set of real-time vehicle telemetry metrics
+          properties:
+            speed:
+              type: number
+              format: double
+              description: Vehicle speed in km/h
+              example: 82.3
+            fuel_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Fuel level percentage
+              example: 67.2
+            engine_temp:
+              type: number
+              format: double
+              description: Engine temperature in °C
+              example: 90.5
+            tire_pressure:
+              type: object
+              additionalProperties: false
+              description: Tire pressure per wheel in kPa
+              properties:
+                front_left:
+                  type: number
+                  example: 235
+                front_right:
+                  type: number
+                  example: 238
+                rear_left:
+                  type: number
+                  example: 232
+                rear_right:
+                  type: number
+                  example: 230
+            oil_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Engine oil level percentage
+              example: 85.0
+            outside_temp:
+              type: number
+              format: double
+              description: External ambient temperature in °C
+              example: 12.4
+            brake_status:
+              type: string
+              enum: [ok, worn, malfunction]
+              description: Brake system status
+              example: ok
+            battery_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Battery charge level percentage
+              example: 95.5
+            gps:
+              type: object
+              additionalProperties: false
+              description: GPS navigation information
+              properties:
+                lat:
+                  type: number
+                  format: double
+                  minimum: -90
+                  maximum: 90
+                  example: 48.8566
+                lon:
+                  type: number
+                  format: double
+                  minimum: -180
+                  maximum: 180
+                  example: 2.3522
+                heading:
+                  type: number
+                  format: double
+                  example: 125.3
+                altitude:
+                  type: number
+                  format: double
+                  example: 35.2
+                speed_over_ground:
+                  type: number
+                  format: double
+                  example: 81.7
+            airbag_status:
+              type: string
+              enum: [armed, deployed, fault]
+              description: Airbag system status
+              example: armed
+            transmission:
+              type: object
+              additionalProperties: false
+              description: Transmission data
+              properties:
+                gear:
+                  type: integer
+                  example: 4
+                mode:
+                  type: string
+                  enum: [eco, normal, sport, manual]
+                  example: sport
+            lights_status:
+              type: object
+              additionalProperties: false
+              description: Vehicle lights state
+              properties:
+                headlights:
+                  type: boolean
+                  example: true
+                brake_lights:
+                  type: boolean
+                  example: false
+                turn_signal_left:
+                  type: boolean
+                  example: false
+                turn_signal_right:
+                  type: boolean
+                  example: true
+            climate_control:
+              type: object
+              additionalProperties: false
+              description: Air conditioning and heating status
+              properties:
+                temperature_setting:
+                  type: number
+                  example: 21.5
+                fan_speed:
+                  type: integer
+                  example: 3
+                ac_on:
+                  type: boolean
+                  example: true
+                recirculation_mode:
+                  type: boolean
+                  example: false
+            seatbelt_status:
+              type: object
+              additionalProperties: false
+              description: Seatbelt fastening status per seat
+              properties:
+                driver:
+                  type: boolean
+                  example: true
+                passenger_front:
+                  type: boolean
+                  example: true
+                rear_left:
+                  type: boolean
+                  example: false
+                rear_center:
+                  type: boolean
+                  example: true
+                rear_right:
+                  type: boolean
+                  example: true
+    # Import common Error schema
+    Error:
+      $ref: './common.yaml#/components/schemas/Error'
+
+  responses:
+    # Import common responses
+    BadRequest:
+      $ref: './common.yaml#/components/responses/BadRequest'
+    Unauthorized:
+      $ref: './common.yaml#/components/responses/Unauthorized'
+    RateLimitExceeded:
+      $ref: './common.yaml#/components/responses/RateLimitExceeded'
+    InternalError:
+      $ref: './common.yaml#/components/responses/InternalError'

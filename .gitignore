@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.cover
+report.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files (SECRETS - NEVER COMMIT!)
+# Exception: *.example files are templates and can be committed
+.env
+.env.test
+.env.local
+.env.*.local
+!.env.example
+!.env.test.example
+
+# Cache
+.cache/
+*.log
+
+# Development tools
+.ruff_cache/
+
+# Build artifacts
+sbom.json
+
+# Cosign keys (Supply Chain Security - NEVER COMMIT PRIVATE KEY!)
+cosign.key
+cosign-keys/
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# local files
+local/*
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# mTLS Certificates (SECRETS - NEVER COMMIT!)
+certs/

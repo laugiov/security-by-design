@@ -1,0 +1,5 @@
+title = "SkyLink gitleaks policy"
+
+[allowlist]
+description = "Allow legacy fake PEM present in a past commit"
+commits = ["3444f344df4d059f8f8b54b935545e14877e4fe6"]

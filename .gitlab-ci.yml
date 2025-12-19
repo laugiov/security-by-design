@@ -1,0 +1,283 @@
+# SkyLink — CI de référence (MVP sécurisé)
+# Stages: lint, test, build, scan, sbom, security-scan, (option) sign.
+
+stages: [lint, test, build, scan, sbom, security-scan, sign]
+
+default:
+  image: python:3.12-slim
+  before_script:
+    - python -V
+    - pip install --upgrade pip
+    - pip install poetry
+  cache:
+    paths:
+      - .cache/pip
+      - .venv/
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  DOCKER_TLS_CERTDIR: ""
+  FF_NETWORK_PER_BUILD: "true"
+
+# ------------- LINT -------------
+lint:
+  stage: lint
+  script:
+    - pip install ruff black bandit
+    - ruff --version
+    - ruff check .
+    - black --check .
+    - bandit -r skylink -q --severity-level high
+
+# ------------- TESTS -------------
+test:
+  stage: test
+  script:
+    - poetry install --no-interaction --no-ansi
+    # Generate mTLS test certificates for tests that need them
+    - chmod +x scripts/generate_test_certs.sh
+    - ./scripts/generate_test_certs.sh || echo "Certificate generation skipped"
+    - poetry run pytest -q --junitxml=report.xml --cov=skylink --cov-report=term-missing --cov-fail-under=75
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+# ------------- BUILD IMAGE (KANIKO) -------------
+# Construit et pousse l'image Gateway dans le registry GitLab sans runner privilégié
+build_image:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script: []
+  variables:
+    # Tag court + dernier
+    IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+        --context $CI_PROJECT_DIR
+        --dockerfile $CI_PROJECT_DIR/Dockerfile.gateway
+        --destination $CI_REGISTRY_IMAGE:$IMAGE_TAG
+        --destination $CI_REGISTRY_IMAGE:latest
+        --snapshot-mode=redo
+        --use-new-run
+        --cache=true
+        --skip-tls-verify
+
+# ------------- SCA (pip-audit) -------------
+sca_pip_audit:
+  stage: scan
+  script:
+    - pip install --upgrade pip poetry pip-audit poetry-plugin-export
+    - poetry self add poetry-plugin-export || true
+    - poetry export -f requirements.txt --only main --without-hashes -o requirements.txt
+    - pip-audit -r requirements.txt --strict
+
+# ------------- SECRETS (gitleaks) -------------
+gitleaks:
+  stage: scan
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  before_script: []
+  script:
+    - gitleaks version
+    - gitleaks detect --config .gitleaks.toml --source . --exit-code 1 --verbose
+
+# ------------- IMAGE SCAN (TRIVY) -------------
+trivy_image:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  before_script: []
+  variables:
+    TRIVY_USERNAME: "$CI_REGISTRY_USER"
+    TRIVY_PASSWORD: "$CI_REGISTRY_PASSWORD"
+  script:
+    - trivy --version
+    - trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  needs: ["build_image"]
+
+# ------------- OPENAPI LINT -------------
+# NOTE: Disabled because openapi-spec-validator doesn't support external $ref
+# We rely on openapi_validate job (openapi-generator-cli) which handles $ref correctly
+#openapi_lint:
+#  stage: scan
+#  script:
+#    - pip install openapi-spec-validator pyyaml
+#    - |
+#      for spec_file in openapi/*.yaml; do
+#        if [[ "$(basename "$spec_file")" == "common.yaml" ]]; then
+#          echo "Skipping $spec_file (shared schemas only)"
+#          continue
+#        fi
+#        echo "Validating $spec_file..."
+#        python -c "
+#      from openapi_spec_validator import validate_spec
+#      import yaml
+#      import sys
+#      with open('$spec_file', 'r', encoding='utf-8') as f:
+#          spec = yaml.safe_load(f)
+#      validate_spec(spec)
+#      print('$spec_file is valid')
+#        "
+#      done
+#  rules:
+#    - changes:
+#        - openapi/**/*.yaml
+
+# ------------- OPENAPI SCAN -------------
+openapi_validate:
+  stage: scan
+  image:
+    name: openapitools/openapi-generator-cli:latest
+    entrypoint: [""]
+  before_script: []
+  script:
+    - |
+      for spec in openapi/*.yaml; do
+        if [[ "$(basename "$spec")" == "common.yaml" ]]; then
+          echo "Skipping $spec (shared schemas only)"
+          continue
+        fi
+        echo "Validating $spec..."
+        openapi-generator-cli validate -i "$spec"
+      done
+  rules:
+    - changes:
+        - openapi/**/*
+
+# ------------- SBOM -------------
+sbom:
+  stage: sbom
+  script:
+    - pip install cyclonedx-bom poetry-plugin-export
+    - poetry self add poetry-plugin-export || true
+    - poetry export -f requirements.txt --without-hashes --output requirements.txt || poetry run pip freeze > requirements.txt
+    - python -m cyclonedx_py requirements -i requirements.txt -o sbom.json
+  artifacts:
+    when: always
+    paths:
+      - sbom.json
+  needs: ["test"]
+
+# ------------- DAST (Dynamic Application Security Testing) -------------
+zap_scan:
+  stage: security-scan
+  image:
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+  services:
+    - name: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+      alias: skylink
+      command: ["python", "-m", "uvicorn", "skylink.main:app", "--host", "0.0.0.0", "--port", "8000"]
+  before_script: []
+  variables:
+    APP_URL: "http://skylink:8000"
+  script:
+    - mkdir -p /zap/wrk
+    - echo "Waiting for app to be ready..."
+    - for i in {1..10}; do wget -q --spider "$APP_URL/health" && echo "SUCCESS" && break || (echo "Attempt $i/10..."; sleep 2); done
+    - wget -S "$APP_URL/health" || (echo "App not reachable"; exit 1)
+    - echo "Starting ZAP scan..."
+    - zap-baseline.py -t "$APP_URL" -r zap-report.html -w zap-report.md -J zap-report.json -I -m 3 || echo "ZAP done with warnings"
+    - cp -v /zap/wrk/zap-report.* "$CI_PROJECT_DIR"/
+    - ls -lh "$CI_PROJECT_DIR"/zap-report.*
+  artifacts:
+    when: always
+    paths:
+      - zap-report.json
+      - zap-report.html
+      - zap-report.md
+  needs: ["build_image"]
+  allow_failure: true
+
+# ------------- SIGNATURE & ATTESTATION (Supply Chain Security) -------------
+# Signe l'image Docker et attache l'attestation SBOM avec cosign
+# Requiert: COSIGN_PRIVATE_KEY et COSIGN_PASSWORD en variables CI protegees
+
+sign_image:
+  stage: sign
+  image:
+    name: cgr.dev/chainguard/cosign:latest
+    entrypoint: [""]
+  before_script: []
+  variables:
+    COSIGN_YES: "true"  # Skip confirmation prompts
+  script:
+    - cosign version
+    # Authentification au registry GitLab
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - echo "Signing image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
+    # Signer l'image avec la cle (COSIGN_PASSWORD dechiffre la cle privee)
+    - export COSIGN_PASSWORD="$COSIGN_PASSWORD"
+    - cosign sign --key "$COSIGN_PRIVATE_KEY" "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - cosign sign --key "$COSIGN_PRIVATE_KEY" "$CI_REGISTRY_IMAGE:latest"
+    - echo "Image signed successfully!"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    - if: $CI_COMMIT_TAG
+      when: on_success
+  allow_failure: true
+  needs: ["build_image", "trivy_image"]
+
+# Attache l'attestation SBOM a l'image signee
+attest_sbom:
+  stage: sign
+  image:
+    name: cgr.dev/chainguard/cosign:latest
+    entrypoint: [""]
+  before_script: []
+  variables:
+    COSIGN_YES: "true"
+  script:
+    - cosign version
+    # Authentification au registry GitLab
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - echo "Attesting SBOM to image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
+    # Attacher le SBOM comme attestation (COSIGN_PASSWORD dechiffre la cle privee)
+    - export COSIGN_PASSWORD="$COSIGN_PASSWORD"
+    - cosign attest --key "$COSIGN_PRIVATE_KEY" --predicate sbom.json --type cyclonedx "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - echo "SBOM attestation attached successfully!"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    - if: $CI_COMMIT_TAG
+      when: on_success
+  allow_failure: true
+  needs: ["sign_image", "sbom"]
+  artifacts:
+    paths:
+      - sbom.json
+
+# Verification de la signature (job de test)
+verify_signature:
+  stage: sign
+  image:
+    name: cgr.dev/chainguard/cosign:latest
+    entrypoint: [""]
+  before_script: []
+  script:
+    - cosign version
+    # Authentification au registry GitLab
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - echo "Verifying signature for $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
+    # Debug: afficher la cle publique (variable File = chemin du fichier)
+    - cat "$COSIGN_PUBLIC_KEY"
+    # Verifier la signature
+    - cosign verify --key "$COSIGN_PUBLIC_KEY" "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - echo "Signature verified successfully!"
+    # Verifier l'attestation SBOM
+    - cosign verify-attestation --key "$COSIGN_PUBLIC_KEY" --type cyclonedx "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" || echo "SBOM attestation verification skipped"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: on_success
+    - if: $CI_COMMIT_TAG
+      when: on_success
+  allow_failure: true
+  needs: ["attest_sbom"]

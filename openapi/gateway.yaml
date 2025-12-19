@@ -1,0 +1,1102 @@
+#autogen for test ci only
+openapi: 3.0.3
+info:
+  title: SkyLink API
+  version: 0.6.2
+  description: |
+    SkyLink Connected Car Platform - MVP
+
+    Security by Design implementation with JWT authentication,
+    rate limiting, and strict input validation.
+  contact:
+    name: SkyLink Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.skylink.example.com
+    description: Production server
+
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: telemetry
+    description: Vehicle telemetry data ingestion
+  - name: weather
+    description: Weather information retrieval
+  - name: contacts
+    description: Google Contacts integration (via People API)
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns the health status of the service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: skylink
+
+  /auth/token:
+    post:
+      tags: [auth]
+      summary: Obtain JWT token
+      description: |
+        Authenticate a vehicle and receive a JWT access token.
+        Token is valid for 15 minutes maximum (Security by Design).
+      operationId: obtainToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id]
+              additionalProperties: false
+              properties:
+                vehicle_id:
+                  type: string
+                  format: uuid
+                  description: Unique identifier of the vehicle
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: JWT token issued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type, expires_in]
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token (RS256 signed)
+                    example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    enum: [Bearer]
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    description: Token lifetime in seconds
+                    example: 900
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /telemetry:
+    post:
+      tags: [telemetry]
+      summary: Ingest telemetry event
+      description: |
+        Store vehicle telemetry data with idempotency guarantee.
+        Idempotency key: (vehicle_id, event_id)
+      operationId: ingestTelemetry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryEvent'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: created
+                  event_id:
+                    type: string
+                    format: uuid
+        '200':
+          description: Idempotent duplicate (event already exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: duplicate
+                  event_id:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Conflict - same event_id with different data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload too large (max 64KB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /weather:
+    get:
+      tags: [weather]
+      summary: Get weather information
+      description: |
+        Retrieve current weather by providing lat and long
+      operationId: getWeather
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          description: Latitude in decimal degrees (rounded to 4 decimals for privacy).
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+            example: 40.71
+        - name: lon
+          in: query
+          description: Longitude in decimal degrees (rounded to 4 decimals for privacy).
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+            example: -74.01
+        - name: lang
+          in: query
+          description: |
+            UI language for textual fields (**ISO 639-1**, 2 letters). Examples: "en", "fr", "es".
+            Affects `location.name`, `region`, `country`, and `current.condition.text`.
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+            example: fr
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '503':
+          description: Service temporarily unavailable (upstream weather provider)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /contacts/oauth/initiate:
+    post:
+      tags: [contacts]
+      summary: Start Google OAuth (Authorization Code + PKCE)
+      description: |
+        Generates Google authorization URL with PKCE.
+        Client redirects user to `authorization_url`.
+        Minimum scope: `https://www.googleapis.com/auth/contacts.readonly`.
+        Optional: `https://www.googleapis.com/auth/contacts.other.readonly` to include "Other contacts".
+      operationId: startGoogleOAuth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [redirect_uri]
+              additionalProperties: false
+              properties:
+                redirect_uri:
+                  type: string
+                  format: uri
+                  description: Frontend URI to which Google will return `code` and `state`.
+                  example: "https://app.example.com/oauth/callback/google"
+                include_other_contacts:
+                  type: boolean
+                  description: |
+                    If true, adds the `contacts.other.readonly` scope to list "Other contacts".
+                  default: false
+      responses:
+        '200':
+          description: Authorization URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorization_url, state, code_challenge_method]
+                properties:
+                  authorization_url:
+                    type: string
+                    description: Complete Google OAuth URL (including state, code_challenge, etc.).
+                  state:
+                    type: string
+                    description: Anti-CSRF state to return as-is to the callback.
+                  code_challenge_method:
+                    type: string
+                    enum: [S256]
+                    example: S256
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '503':
+          description: Identity provider temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /contacts/oauth/callback:
+    get:
+      tags: [contacts]
+      summary: OAuth callback (exchange code for tokens)
+      description: |
+        Exchanges `code` for Google tokens (access + refresh) and associates them with the application account.
+        Redirige côté front si `redirect_uri` a été fournie à l’initiation.
+      operationId: googleOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Code d’autorisation retourné par Google.
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Valeur `state` fournie lors de l’initiation (anti-CSRF).
+      responses:
+        '302':
+          description: Redirect to frontend `redirect_uri` with success status
+        '200':
+          description: Tokens stored (flow en contexte API pur, sans redirection)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: linked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Identity provider temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /contacts/oauth/revoke:
+    post:
+      tags: [contacts]
+      summary: Revoke Google OAuth tokens
+      description: Revokes Google tokens linked to the current application account.
+      operationId: revokeGoogleOAuth
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Revoked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Identity provider temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /contacts:
+    get:
+      tags: [contacts]
+      summary: List user's Google contacts (proxied)
+      description: |
+        Proxifie `people.connections.list` pour l’utilisateur lié.
+        Implements pagination, sorting, and **incremental sync** via `sync_token`.
+        **Note**: `person_fields` is *required* by Google, otherwise 400 error from provider.
+      operationId: listContacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: person_fields
+          in: query
+          required: true
+          description: |
+            Google People field mask to return (CSV format).
+            Ex: `names,emailAddresses,phoneNumbers,photos`.
+          schema:
+            type: string
+            example: names,emailAddresses,phoneNumbers,photos
+        - name: page_size
+          in: query
+          description: Number of items per page (1-200, default 100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: page_token
+          in: query
+          description: Pagination token (received from `next_page_token`).
+          schema:
+            type: string
+        - name: sort_order
+          in: query
+          description: Ordre de tri quand `sync_token` n’est pas utilisé.
+          schema:
+            type: string
+            enum:
+              - LAST_MODIFIED_ASCENDING
+              - LAST_MODIFIED_DESCENDING
+              - FIRST_NAME_ASCENDING
+              - LAST_NAME_ASCENDING
+            default: LAST_MODIFIED_ASCENDING
+        - name: request_sync_token
+          in: query
+          description: |
+            Return `next_sync_token` on the **last** page.
+          schema:
+            type: boolean
+            default: false
+        - name: sync_token
+          in: query
+          description: |
+            Sync token to retrieve only changes since last call.
+            **Expires in ~7 days**; if expired, perform a **full sync** without `sync_token`.
+          schema:
+            type: string
+        - name: sources
+          in: query
+          description: |
+            Source mask (Google People `ReadSourceType`). Default: CONTACT + PROFILE.
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - READ_SOURCE_TYPE_CONTACT
+                - READ_SOURCE_TYPE_PROFILE
+                - READ_SOURCE_TYPE_DOMAIN_PROFILE
+                - READ_SOURCE_TYPE_DOMAIN_CONTACT
+          example:
+            - READ_SOURCE_TYPE_CONTACT
+            - READ_SOURCE_TYPE_PROFILE
+        - name: q
+          in: query
+          description: |
+            Gateway-side filter (post-processing) on name/email (optional, best effort).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contacts retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsList'
+        '400':
+          description: Bad request - validation/provider error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized (JWT manquant/expiré) ou compte Google non lié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient Google scopes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '503':
+          description: Provider unavailable / quota exceeded / transient error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with RS256 signature.
+        Claims: sub (vehicle_id), aud=skylink, iat, exp (max 15 min)
+
+  schemas:
+    TelemetryEvent:
+      type: object
+      required: [event_id, vehicle_id, ts, metrics]
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique event identifier (UUIDv7 recommended)
+          example: "01936d9f-8f5a-7a3e-9c1d-2b3f4c5d6e7f"
+        vehicle_id:
+          type: string
+          format: uuid
+          description: Vehicle identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        ts:
+          type: string
+          format: date-time
+          description: Event timestamp (ISO 8601 UTC)
+          example: "2025-01-15T10:30:00Z"
+        metrics:
+          type: object
+          additionalProperties: false
+          description: Complete set of real-time vehicle telemetry metrics
+          properties:
+            speed:
+              type: number
+              format: double
+              description: Vehicle speed in km/h
+              example: 82.3
+            fuel_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Fuel level percentage
+              example: 67.2
+            engine_temp:
+              type: number
+              format: double
+              description: Engine temperature in °C
+              example: 90.5
+            tire_pressure:
+              type: object
+              additionalProperties: false
+              description: Tire pressure per wheel in kPa
+              properties:
+                front_left:
+                  type: number
+                  example: 235
+                front_right:
+                  type: number
+                  example: 238
+                rear_left:
+                  type: number
+                  example: 232
+                rear_right:
+                  type: number
+                  example: 230
+            oil_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Engine oil level percentage
+              example: 85.0
+            outside_temp:
+              type: number
+              format: double
+              description: External ambient temperature in °C
+              example: 12.4
+            brake_status:
+              type: string
+              enum: [ok, worn, malfunction]
+              description: Brake system status
+              example: ok
+            battery_level:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              description: Battery charge level percentage
+              example: 95.5
+            gps:
+              type: object
+              additionalProperties: false
+              description: GPS navigation information
+              properties:
+                lat:
+                  type: number
+                  format: double
+                  minimum: -90
+                  maximum: 90
+                  example: 48.8566
+                lon:
+                  type: number
+                  format: double
+                  minimum: -180
+                  maximum: 180
+                  example: 2.3522
+                heading:
+                  type: number
+                  format: double
+                  example: 125.3
+                altitude:
+                  type: number
+                  format: double
+                  example: 35.2
+                speed_over_ground:
+                  type: number
+                  format: double
+                  example: 81.7
+            airbag_status:
+              type: string
+              enum: [armed, deployed, fault]
+              description: Airbag system status
+              example: armed
+            transmission:
+              type: object
+              additionalProperties: false
+              description: Transmission data
+              properties:
+                gear:
+                  type: integer
+                  example: 4
+                mode:
+                  type: string
+                  enum: [eco, normal, sport, manual]
+                  example: sport
+            lights_status:
+              type: object
+              additionalProperties: false
+              description: Vehicle lights state
+              properties:
+                headlights:
+                  type: boolean
+                  example: true
+                brake_lights:
+                  type: boolean
+                  example: false
+                turn_signal_left:
+                  type: boolean
+                  example: false
+                turn_signal_right:
+                  type: boolean
+                  example: true
+            climate_control:
+              type: object
+              additionalProperties: false
+              description: Air conditioning and heating status
+              properties:
+                temperature_setting:
+                  type: number
+                  example: 21.5
+                fan_speed:
+                  type: integer
+                  example: 3
+                ac_on:
+                  type: boolean
+                  example: true
+                recirculation_mode:
+                  type: boolean
+                  example: false
+            seatbelt_status:
+              type: object
+              additionalProperties: false
+              description: Seatbelt fastening status per seat
+              properties:
+                driver:
+                  type: boolean
+                  example: true
+                passenger_front:
+                  type: boolean
+                  example: true
+                rear_left:
+                  type: boolean
+                  example: false
+                rear_center:
+                  type: boolean
+                  example: true
+                rear_right:
+                  type: boolean
+                  example: true
+
+    WeatherData:
+      type: object
+      required: [location, current]
+      additionalProperties: false
+      description: Current weather response (aligned with the provided model).
+      properties:
+        location:
+          type: object
+          additionalProperties: false
+          description: Location metadata for the requested coordinates.
+          required: [name, region, country, lat, lon, tz_id, localtime_epoch, localtime]
+          properties:
+            name:
+              type: string
+              description: Human-readable city/locality name (localized per `lang`).
+              example: New York
+            region:
+              type: string
+              description: Administrative region or state (localized per `lang`).
+              example: New York
+            country:
+              type: string
+              description: Country name (localized per `lang`).
+              example: United States of America
+            lat:
+              type: number
+              format: double
+              description: Latitude of the location in decimal degrees.
+              example: 40.71
+            lon:
+              type: number
+              format: double
+              description: Longitude of the location in decimal degrees.
+              example: -74.01
+            tz_id:
+              type: string
+              description: IANA time zone identifier for the location.
+              example: America/New_York
+            localtime_epoch:
+              type: integer
+              format: int64
+              description: Local time as a Unix epoch (seconds) at the location.
+              example: 1658522976
+            localtime:
+              type: string
+              description: Local time as a formatted string "YYYY-MM-DD HH:mm".
+              example: "2022-07-22 16:49"
+        current:
+          type: object
+          additionalProperties: false
+          description: Snapshot of current weather conditions.
+          required:
+            - last_updated_epoch
+            - last_updated
+            - temp_c
+            - temp_f
+            - is_day
+            - condition
+            - wind_mph
+            - wind_kph
+            - wind_degree
+            - wind_dir
+            - pressure_mb
+            - pressure_in
+            - precip_mm
+            - precip_in
+            - humidity
+            - cloud
+            - feelslike_c
+            - feelslike_f
+            - vis_km
+            - vis_miles
+            - uv
+            - gust_mph
+            - gust_kph
+          properties:
+            last_updated_epoch:
+              type: integer
+              format: int64
+              description: Update time as Unix epoch (seconds).
+              example: 1658522700
+            last_updated:
+              type: string
+              description: Update time formatted "YYYY-MM-DD HH:mm".
+              example: "2022-07-22 16:45"
+            temp_c:
+              type: number
+              format: double
+              description: Air temperature in Celsius.
+              example: 34.4
+            temp_f:
+              type: number
+              format: double
+              description: Air temperature in Fahrenheit.
+              example: 93.9
+            is_day:
+              type: integer
+              format: int32
+              description: Daylight indicator (1 = day, 0 = night).
+              example: 1
+            condition:
+              type: object
+              additionalProperties: false
+              description: Text/icon/code triple describing sky conditions.
+              required: [text, icon, code]
+              properties:
+                text:
+                  type: string
+                  description: Short human-readable summary (localized per `lang`).
+                  example: Partly cloudy
+                icon:
+                  type: string
+                  description: Icon path/URL for the condition.
+                  example: //cdn.weatherapi.com/weather/64x64/day/116.png
+                code:
+                  type: integer
+                  format: int32
+                  description: Provider-specific condition code.
+                  example: 1003
+            wind_mph:
+              type: number
+              format: double
+              description: Sustained wind speed in miles per hour.
+              example: 16.1
+            wind_kph:
+              type: number
+              format: double
+              description: Sustained wind speed in kilometers per hour.
+              example: 25.9
+            wind_degree:
+              type: number
+              format: double
+              description: Wind direction in degrees (0–360, meteorological).
+              example: 180
+            wind_dir:
+              type: string
+              description: Cardinal wind direction (e.g., N, NE, SSW).
+              example: S
+            pressure_mb:
+              type: number
+              format: double
+              description: Atmospheric pressure in millibars.
+              example: 1011
+            pressure_in:
+              type: number
+              format: double
+              description: Atmospheric pressure in inches of mercury.
+              example: 29.85
+            precip_mm:
+              type: number
+              format: double
+              description: Precipitation over last hour in millimeters.
+              example: 0
+            precip_in:
+              type: number
+              format: double
+              description: Precipitation over last hour in inches.
+              example: 0
+            humidity:
+              type: number
+              format: double
+              description: Relative humidity percentage (0–100).
+              example: 31
+            cloud:
+              type: number
+              format: double
+              description: Cloud cover percentage (0–100).
+              example: 75
+            feelslike_c:
+              type: number
+              format: double
+              description: Feels-like temperature in Celsius (wind/heat adjusted).
+              example: 37
+            feelslike_f:
+              type: number
+              format: double
+              description: Feels-like temperature in Fahrenheit.
+              example: 98.6
+            vis_km:
+              type: number
+              format: double
+              description: Visibility distance in kilometers.
+              example: 16
+            vis_miles:
+              type: number
+              format: double
+              description: Visibility distance in miles.
+              example: 9
+            uv:
+              type: integer
+              format: int32
+              description: Ultraviolet index.
+              example: 8
+            gust_mph:
+              type: number
+              format: double
+              description: Wind gust speed in miles per hour.
+              example: 11.6
+            gust_kph:
+              type: number
+              format: double
+              description: Wind gust speed in kilometers per hour.
+              example: 18.7
+            air_quality:
+              type: object
+              additionalProperties: false
+              description: Air quality metrics (may be absent if provider disabled).
+              properties:
+                co:
+                  type: number
+                  format: double
+                  description: Carbon monoxide concentration.
+                  example: 293.70001220703125
+                no2:
+                  type: number
+                  format: double
+                  description: Nitrogen dioxide concentration.
+                  example: 18.5
+                o3:
+                  type: number
+                  format: double
+                  description: Ozone concentration.
+                  example: 234.60000610351562
+                so2:
+                  type: number
+                  format: double
+                  description: Sulfur dioxide concentration.
+                  example: 12
+                pm2_5:
+                  type: number
+                  format: double
+                  description: Fine particulate matter ≤2.5μm concentration.
+                  example: 13.600000381469727
+                pm10:
+                  type: number
+                  format: double
+                  description: Particulate matter ≤10μm concentration.
+                  example: 15
+                us-epa-index:
+                  type: integer
+                  format: int32
+                  description: US EPA AQI category index.
+                  example: 1
+                gb-defra-index:
+                  type: integer
+                  format: int32
+                  description: UK DEFRA AQI category index.
+                  example: 2
+
+    ContactsList:
+      type: object
+      description: Paginated result from `people.connections.list` (normalized by gateway).
+      required: [items]
+      properties:
+        items:
+          type: array
+          description: List of persons, structure matches the `person_fields` mask.
+          items:
+            $ref: '#/components/schemas/GooglePerson'
+        next_page_token:
+          type: string
+          nullable: true
+          description: À renvoyer dans `page_token` pour la page suivante (absent si dernière page).
+          example: "CiQA3P7j…"
+        next_sync_token:
+          type: string
+          nullable: true
+          description: À renvoyer dans `sync_token` pour la sync incrémentale (présent uniquement sur la dernière page si `request_sync_token=true`).
+          example: "CPD2tL6i…"
+        total_items:
+          type: integer
+          description: Nombre total d’éléments (si fourni par le provider).
+          example: 350
+
+    GooglePerson:
+      type: object
+      description: Subset of Google `Person` schema, controlled by `person_fields`.
+      properties:
+        resourceName:
+          type: string
+          description: Identifiant `people/{id}` Google.
+          example: "people/c1234567890"
+        etag:
+          type: string
+          description: ETag de la ressource.
+        names:
+          type: array
+          items:
+            type: object
+            properties:
+              displayName:
+                type: string
+              givenName:
+                type: string
+              familyName:
+                type: string
+              unstructuredName:
+                type: string
+        emailAddresses:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                format: email
+              type:
+                type: string
+                description: Label (work, home, …)
+              metadata:
+                type: object
+                properties:
+                  primary:
+                    type: boolean
+        phoneNumbers:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              type:
+                type: string
+              metadata:
+                type: object
+                properties:
+                  primary:
+                    type: boolean
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+              default:
+                type: boolean
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              title:
+                type: string
+        birthdays:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Date as provided by Google
+        addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              formattedValue:
+                type: string
+        metadata:
+          type: object
+          properties:
+            deleted:
+              type: boolean
+              description: True if contact has been deleted (incremental sync case).
+
+    Error:
+      type: object
+      required: [error]
+      additionalProperties: false
+      description: Standard error envelope (no trace_id).
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              description: |
+                Machine-readable error code.
+                Possible values: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN,
+                RATE_LIMIT_EXCEEDED, PROVIDER_UNAVAILABLE, INTERNAL_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error message.
+              example: Invalid input data
+            details:
+              type: object
+              nullable: true
+              description: Optional structured details for validation errors.
+              properties:
+                fields:
+                  type: array
+                  description: Per-field validation issues
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        description: Affected field name
+                        example: lat
+                      issue:
+                        type: string
+                        description: Issue keyword
+                        example: range
+                      message:
+                        type: string
+                        description: Human message
+                        example: lat must be between -90 and 90
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - invalid or expired JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

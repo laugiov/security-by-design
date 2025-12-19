@@ -1,0 +1,94 @@
+[tool.poetry]
+name = "skylink"
+version = "0.1.0"
+description = "SkyLink - Connected Car Platform (MVP)"
+authors = ["Laurent Giovannoni"]
+readme = "README.md"
+packages = [{include = "skylink"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.120.2"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.10.0"
+httpx = "^0.26.0"
+redis = "^5.0.1"
+sqlalchemy = "^2.0.25"
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
+python-dotenv = "^1.0.0"
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-instrumentation-fastapi = "^0.43b0"
+prometheus-client = "^0.19.0"
+prometheus-fastapi-instrumentator = "^7.0.0"
+pydantic-settings = "^2.11.0"
+cryptography = "^46.0.3"
+psycopg2-binary = "^2.9.11"
+alembic = "^1.17.1"
+slowapi = "^0.1.9"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.3"
+ruff = "^0.1.14"
+black = "^24.1.0"
+isort = "^5.13.2"
+bandit = "^1.7.6"
+pre-commit = "^3.6.0"
+httpx = "^0.26.0"
+openapi-spec-validator = "^0.7.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "W", "I", "N", "B", "S"]
+ignore = ["S101"]  # Allow assert in tests
+
+[tool.ruff.per-file-ignores]
+# Ignore line length and naming conventions in generated model files
+"skylink/models/**/*.py" = ["E501", "N805"]
+# Ignore subprocess warnings in test config (hardcoded openssl for CI/CD key generation)
+"tests/conftest.py" = ["S603", "S607"]
+# Ignore hardcoded password false positives for pagination tokens in contacts tests
+"tests/test_contacts_service.py" = ["S105"]
+# Ignore binding to all interfaces (required for Docker containers)
+"contacts/config.py" = ["S104"]
+"weather/config.py" = ["S104"]
+# Ignore B008 for FastAPI Depends in function signatures (standard FastAPI pattern)
+"skylink/routers/*.py" = ["B008"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --cov=skylink --cov-report=term-missing"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "e2e: End-to-end tests with real external services (manual execution only)",
+]
+
+[tool.coverage.run]
+source = ["skylink"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/venv/*", "*/.venv/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

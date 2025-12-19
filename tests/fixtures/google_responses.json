@@ -1,0 +1,153 @@
+{
+  "oauth_token_success": {
+    "access_token": "ya29.a0AfB_byC_MOCK_ACCESS_TOKEN_EXAMPLE_ANONYMIZED_FOR_TESTING_1234567890",
+    "expires_in": 3599,
+    "refresh_token": "1//0gHdtzPnWxCB4CgYIARAAGBASNwF-L9Ir_MOCK_REFRESH_TOKEN_ANONYMIZED",
+    "scope": "https://www.googleapis.com/auth/contacts.readonly",
+    "token_type": "Bearer"
+  },
+  "oauth_token_error_invalid_grant": {
+    "error": "invalid_grant",
+    "error_description": "Bad Request"
+  },
+  "oauth_refresh_success": {
+    "access_token": "ya29.a0AfB_byC_NEW_MOCK_ACCESS_TOKEN_AFTER_REFRESH_1234567890",
+    "expires_in": 3599,
+    "scope": "https://www.googleapis.com/auth/contacts.readonly",
+    "token_type": "Bearer"
+  },
+  "oauth_refresh_error_revoked": {
+    "error": "invalid_grant",
+    "error_description": "Token has been expired or revoked."
+  },
+  "people_api_success": {
+    "connections": [
+      {
+        "resourceName": "people/c1234567890",
+        "etag": "%EgUBAj0EPRo=",
+        "names": [
+          {
+            "metadata": {
+              "primary": true,
+              "source": {
+                "type": "CONTACT",
+                "id": "1234567890"
+              }
+            },
+            "displayName": "Alice Dupont",
+            "familyName": "Dupont",
+            "givenName": "Alice",
+            "displayNameLastFirst": "Dupont, Alice",
+            "unstructuredName": "Alice Dupont"
+          }
+        ],
+        "emailAddresses": [
+          {
+            "metadata": {
+              "primary": true,
+              "source": {
+                "type": "CONTACT",
+                "id": "1234567890"
+              }
+            },
+            "value": "alice.dupont@example.com",
+            "type": "home"
+          }
+        ],
+        "phoneNumbers": [
+          {
+            "metadata": {
+              "primary": true,
+              "source": {
+                "type": "CONTACT",
+                "id": "1234567890"
+              }
+            },
+            "value": "+33 6 12 34 56 78",
+            "canonicalForm": "+33612345678",
+            "type": "mobile"
+          }
+        ]
+      },
+      {
+        "resourceName": "people/c9876543210",
+        "etag": "%EgUBAj0EPRp=",
+        "names": [
+          {
+            "metadata": {
+              "primary": true,
+              "source": {
+                "type": "CONTACT",
+                "id": "9876543210"
+              }
+            },
+            "displayName": "Bob Martin",
+            "familyName": "Martin",
+            "givenName": "Bob",
+            "displayNameLastFirst": "Martin, Bob",
+            "unstructuredName": "Bob Martin"
+          }
+        ],
+        "emailAddresses": [
+          {
+            "metadata": {
+              "primary": true,
+              "source": {
+                "type": "CONTACT",
+                "id": "9876543210"
+              }
+            },
+            "value": "bob.martin@example.com",
+            "type": "work"
+          }
+        ]
+      }
+    ],
+    "totalPeople": 2,
+    "totalItems": 2
+  },
+  "people_api_empty": {
+    "connections": [],
+    "totalPeople": 0,
+    "totalItems": 0
+  },
+  "people_api_with_pagination": {
+    "connections": [
+      {
+        "resourceName": "people/c1111111111",
+        "etag": "%EgUBAj0EPR1=",
+        "names": [
+          {
+            "displayName": "Contact 1",
+            "familyName": "One",
+            "givenName": "Contact"
+          }
+        ]
+      }
+    ],
+    "nextPageToken": "CAoQAhiAgICAqIev5wIyCggBEAIYAiABKAE",
+    "totalPeople": 10,
+    "totalItems": 1
+  },
+  "people_api_error_unauthorized": {
+    "error": {
+      "code": 401,
+      "message": "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential.",
+      "status": "UNAUTHENTICATED"
+    }
+  },
+  "people_api_error_quota_exceeded": {
+    "error": {
+      "code": 429,
+      "message": "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'people.googleapis.com'",
+      "status": "RESOURCE_EXHAUSTED"
+    }
+  },
+  "people_api_error_timeout": {
+    "error": {
+      "code": 504,
+      "message": "Deadline exceeded",
+      "status": "DEADLINE_EXCEEDED"
+    }
+  }
+}

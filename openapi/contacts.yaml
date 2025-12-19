@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: SkyLink - Contacts Service API
+  version: 2.0.0
+  description: |
+    Internal microservice integrating with Google People API for contacts.
+
+    **OAuth Flow**: Pre-configured OAuth via admin CLI tool (simplified).
+    An administrator uses the CLI tool (`scripts/configure_vehicle_oauth.py`) to:
+    1. Generate Google OAuth authorization URL
+    2. Obtain authorization code from Google
+    3. Call `/oauth/callback` to save encrypted tokens
+
+    **Authentication**: Requires X-Vehicle-Id header (injected by gateway from JWT).
+
+    **Demo Mode**: If `DEMO_MODE=true`, returns static fixtures without OAuth.
+
+    See: `local/contacts-oauth/README.md` and `local/contacts-oauth/DEPLOYMENT_GUIDE.md` for complete documentation.
+servers:
+  - url: http://contacts:8003
+    description: Contacts service (cluster-internal)
+  - url: https://contacts.skylink.internal
+    description: Contacts service (internal TLS)
+tags:
+  - name: contacts
+    description: Google Contacts integration (via People API)
+  - name: oauth
+    description: OAuth configuration endpoints
+  - name: health
+    description: Health check endpoints
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns the health status of the contacts service
+      operationId: contacts.healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: contacts
+
+  /v1/contacts:
+    get:
+      tags: [contacts]
+      summary: List user's Google contacts
+      description: |
+        Fetch Google contacts for the authenticated vehicle.
+
+        **Demo Mode**: Returns static fixtures if `DEMO_MODE=true`.
+
+        **Production Mode**:
+        - Fetches real contacts from Google People API
+        - Auto-refreshes access tokens if expired
+        - Requires prior OAuth configuration via `/oauth/callback`
+
+        **Required Header**: `X-Vehicle-Id` (injected by gateway from JWT)
+      operationId: contacts.listContacts
+      security:
+        - vehicleId: []
+      parameters:
+        - name: X-Vehicle-Id
+          in: header
+          required: true
+          description: Vehicle UUID (extracted from JWT by gateway)
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: person_fields
+          in: query
+          required: true
+          description: |
+            Google People field mask (comma-separated).
+            Example: `names,emailAddresses,phoneNumbers,photos`
+
+            Available fields: names, emailAddresses, phoneNumbers, photos, addresses,
+            organizations, birthdays, biographies, urls, relations, skills, interests, etc.
+          schema:
+            type: string
+          example: "names,emailAddresses,phoneNumbers"
+        - name: page
+          in: query
+          description: Page number (1-indexed, for simplified pagination)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          description: Number of items per page (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Contacts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsListResponse'
+        '404':
+          description: Vehicle not configured - OAuth tokens not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "VEHICLE_NOT_CONFIGURED"
+                  message: "Please configure your Google account in the mobile app"
+                  action: "configure_google_account"
+        '401':
+          description: OAuth tokens expired or revoked - reauthorization required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                refresh_token_revoked:
+                  summary: Refresh token was revoked
+                  value:
+                    detail:
+                      code: "REFRESH_TOKEN_REVOKED"
+                      message: "Your Google authorization has been revoked. Please reconnect your account"
+                      action: "reauthorize_google_account"
+                invalid_access_token:
+                  summary: Access token is invalid
+                  value:
+                    detail:
+                      code: "INVALID_ACCESS_TOKEN"
+                      message: "Your Google access token is invalid. Please reconnect your account"
+                      action: "reauthorize_google_account"
+        '429':
+          description: Google API quota exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Number of seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "QUOTA_EXCEEDED"
+                  message: "Google API quota exceeded. Please try again later"
+                  retry_after: 60
+        '503':
+          description: Google People API temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "GOOGLE_API_UNAVAILABLE"
+                  message: "Google People API is temporarily unavailable. Please try again later"
+        '504':
+          description: Google People API request timed out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "GOOGLE_API_TIMEOUT"
+                  message: "Google People API request timed out. Please try again"
+        '502':
+          description: Other Google API errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "GOOGLE_API_ERROR"
+                  message: "Error fetching contacts from Google: <error details>"
+
+  /oauth/callback:
+    post:
+      tags: [oauth]
+      summary: OAuth callback - Configure Google account
+      description: |
+        Called by mobile app after user authorizes Google access.
+
+        **Flow**:
+        1. Mobile app redirects user to Google OAuth consent screen
+        2. User authorizes access
+        3. Google redirects back with authorization code
+        4. Mobile app calls this endpoint with code + vehicle_id
+        5. Service exchanges code for access/refresh tokens
+        6. Tokens are saved in database (refresh_token encrypted with AES-256-GCM)
+
+        **Required Scope**: `https://www.googleapis.com/auth/contacts.readonly`
+
+        **Security**: Refresh tokens are encrypted at rest using AES-256-GCM.
+      operationId: contacts.oauthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: OAuth authorization code from Google
+          schema:
+            type: string
+          example: "4/0AfJohXm..."
+        - name: vehicle_id
+          in: query
+          required: true
+          description: Vehicle UUID to associate tokens with
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Google account configured successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, vehicle_id]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Google account configured successfully"
+                  vehicle_id:
+                    type: string
+                    format: uuid
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+        '400':
+          description: Invalid or expired authorization code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "INVALID_AUTHORIZATION_CODE"
+                  message: "The authorization code is invalid or expired"
+                  error: "Invalid or expired code"
+        '403':
+          description: Insufficient scopes - Required permissions not granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail:
+                  code: "INSUFFICIENT_SCOPES"
+                  message: "Required permissions were not granted. Please authorize with contacts.readonly scope"
+        '500':
+          description: Error saving tokens to database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    vehicleId:
+      type: apiKey
+      in: header
+      name: X-Vehicle-Id
+      description: |
+        Vehicle UUID extracted from JWT by gateway.
+        Gateway verifies JWT and passes vehicle_id via this header.
+
+  schemas:
+    ContactsListResponse:
+      type: object
+      description: Paginated contacts list response
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          description: List of contacts (Google Person objects)
+          items:
+            $ref: '#/components/schemas/GooglePerson'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        next_sync_token:
+          type: string
+          nullable: true
+          description: Sync token for incremental updates (optional, from Google)
+          example: "CPD2tL6i..."
+
+    PaginationInfo:
+      type: object
+      description: Pagination metadata
+      required: [page, size, total]
+      properties:
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+          example: 1
+        size:
+          type: integer
+          description: Items per page
+          example: 10
+        total:
+          type: integer
+          description: Total number of contacts
+          example: 42
+        next_page_token:
+          type: string
+          nullable: true
+          description: Token for next page (if available)
+          example: "page_2"
+
+    GooglePerson:
+      type: object
+      description: |
+        Google Person object (subset controlled by person_fields parameter).
+        Structure matches Google People API response.
+      properties:
+        resourceName:
+          type: string
+          description: Unique identifier for this person
+          example: "people/c1234567890"
+        etag:
+          type: string
+          description: Entity tag for this person
+          example: "%EgUBAj0EPRo="
+        names:
+          type: array
+          description: Person's names (if person_fields includes 'names')
+          items:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  primary:
+                    type: boolean
+                  source:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      id:
+                        type: string
+              displayName:
+                type: string
+                example: "Alice Dupont"
+              givenName:
+                type: string
+                example: "Alice"
+              familyName:
+                type: string
+                example: "Dupont"
+              displayNameLastFirst:
+                type: string
+                example: "Dupont, Alice"
+              unstructuredName:
+                type: string
+                example: "Alice Dupont"
+        emailAddresses:
+          type: array
+          description: Person's email addresses (if person_fields includes 'emailAddresses')
+          items:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  primary:
+                    type: boolean
+                  source:
+                    type: object
+              value:
+                type: string
+                format: email
+                example: "alice.dupont@example.com"
+              type:
+                type: string
+                example: "home"
+        phoneNumbers:
+          type: array
+          description: Person's phone numbers (if person_fields includes 'phoneNumbers')
+          items:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  primary:
+                    type: boolean
+              value:
+                type: string
+                example: "+33 6 12 34 56 78"
+              canonicalForm:
+                type: string
+                example: "+33612345678"
+              type:
+                type: string
+                example: "mobile"
+        photos:
+          type: array
+          description: Person's photos (if person_fields includes 'photos')
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+              default:
+                type: boolean
+        organizations:
+          type: array
+          description: Person's organizations (if person_fields includes 'organizations')
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              title:
+                type: string
+        addresses:
+          type: array
+          description: Person's addresses (if person_fields includes 'addresses')
+          items:
+            type: object
+            properties:
+              formattedValue:
+                type: string
+        birthdays:
+          type: array
+          description: Person's birthdays (if person_fields includes 'birthdays')
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+        metadata:
+          type: object
+          description: Person metadata
+          properties:
+            deleted:
+              type: boolean
+              description: True if contact has been deleted
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+            message:
+              type: string
+              description: Human-readable error message
+            action:
+              type: string
+              description: Suggested action (optional)
+            retry_after:
+              type: integer
+              description: Seconds to wait before retrying (for 429 errors)

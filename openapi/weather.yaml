@@ -1,0 +1,380 @@
+openapi: 3.0.3
+info:
+  title: SkyLink - Weather Service API
+  version: 1.0.0
+  description: |
+    Internal microservice exposing current weather retrieval.
+    Includes Auth (JWT issuance for service-to-service) and Health endpoints.
+servers:
+  - url: http://weather:8002
+    description: Weather service (cluster-internal)
+  - url: https://weather.skylink.internal
+    description: Weather service (internal TLS)
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: weather
+    description: Weather information retrieval
+  - name: health
+    description: Health check endpoints
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns the health status of the weather service
+      operationId: weather.healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: weather
+  /auth/token:
+    post:
+      tags: [auth]
+      summary: Obtain JWT token
+      description: |
+        Authenticate a client/service and receive a JWT access token.
+        Token is valid for 15 minutes maximum.
+      operationId: weather.obtainToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id]
+              additionalProperties: false
+              properties:
+                vehicle_id:
+                  type: string
+                  format: uuid
+                  description: Unique identifier of the vehicle/client
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: JWT token issued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type, expires_in]
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token (RS256 signed)
+                    example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    enum: [Bearer]
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    description: Token lifetime in seconds
+                    example: 900
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /weather:
+    get:
+      tags: [weather]
+      summary: Get weather information
+      description: |
+        Retrieve current weather by providing lat and long
+      operationId: weather.getWeather
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          description: Latitude in decimal degrees (rounded to 4 decimals for privacy).
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+            example: 40.71
+        - name: lon
+          in: query
+          description: Longitude in decimal degrees (rounded to 4 decimals for privacy).
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+            example: -74.01
+        - name: lang
+          in: query
+          description: |
+            UI language for textual fields (**ISO 639-1**, 2 letters). Examples: "en", "fr", "es".
+            Affects `location.name`, `region`, `country`, and `current.condition.text`.
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+            example: fr
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '503':
+          description: Service temporarily unavailable (upstream weather provider)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with RS256 signature.
+        Claims: sub (vehicle_id), aud=weather, iat, exp (max 15 min)
+  schemas:
+    # Import common Error schema
+    Error:
+      $ref: './common.yaml#/components/schemas/Error'
+
+    WeatherData:
+      type: object
+      required: [location, current]
+      additionalProperties: false
+      description: Current weather response.
+      properties:
+        location:
+          type: object
+          additionalProperties: false
+          description: Location metadata for the requested coordinates.
+          required: [name, region, country, lat, lon, tz_id, localtime_epoch, localtime]
+          properties:
+            name:
+              type: string
+              example: New York
+            region:
+              type: string
+              example: New York
+            country:
+              type: string
+              example: United States of America
+            lat:
+              type: number
+              format: double
+              example: 40.71
+            lon:
+              type: number
+              format: double
+              example: -74.01
+            tz_id:
+              type: string
+              example: America/New_York
+            localtime_epoch:
+              type: integer
+              format: int64
+              description: Local time as a Unix epoch (seconds) at the location.
+              example: 1658522976
+            localtime:
+              type: string
+              example: "2022-07-22 16:49"
+        current:
+          type: object
+          additionalProperties: false
+          description: Snapshot of current weather conditions.
+          required:
+            - last_updated_epoch
+            - last_updated
+            - temp_c
+            - temp_f
+            - is_day
+            - condition
+            - wind_mph
+            - wind_kph
+            - wind_degree
+            - wind_dir
+            - pressure_mb
+            - pressure_in
+            - precip_mm
+            - precip_in
+            - humidity
+            - cloud
+            - feelslike_c
+            - feelslike_f
+            - vis_km
+            - vis_miles
+            - uv
+            - gust_mph
+            - gust_kph
+          properties:
+            last_updated_epoch:
+              type: integer
+              format: int64
+              description: Update time as Unix epoch (seconds).
+              example: 1658522700
+            last_updated:
+              type: string
+              example: "2022-07-22 16:45"
+            temp_c:
+              type: number
+              format: double
+              example: 34.4
+            temp_f:
+              type: number
+              format: double
+              example: 93.9
+            is_day:
+              type: integer
+              format: int32
+              example: 1
+            condition:
+              type: object
+              additionalProperties: false
+              required: [text, icon, code]
+              properties:
+                text:
+                  type: string
+                  example: Partly cloudy
+                icon:
+                  type: string
+                  example: //cdn.weatherapi.com/weather/64x64/day/116.png
+                code:
+                  type: integer
+                  format: int32
+                  example: 1003
+            wind_mph:
+              type: number
+              format: double
+              example: 16.1
+            wind_kph:
+              type: number
+              format: double
+              example: 25.9
+            wind_degree:
+              type: number
+              format: double
+              example: 180
+            wind_dir:
+              type: string
+              example: S
+            pressure_mb:
+              type: number
+              format: double
+              example: 1011
+            pressure_in:
+              type: number
+              format: double
+              example: 29.85
+            precip_mm:
+              type: number
+              format: double
+              example: 0
+            precip_in:
+              type: number
+              format: double
+              example: 0
+            humidity:
+              type: number
+              format: double
+              example: 31
+            cloud:
+              type: number
+              format: double
+              example: 75
+            feelslike_c:
+              type: number
+              format: double
+              example: 37
+            feelslike_f:
+              type: number
+              format: double
+              example: 98.6
+            vis_km:
+              type: number
+              format: double
+              example: 16
+            vis_miles:
+              type: number
+              format: double
+              example: 9
+            uv:
+              type: integer
+              format: int32
+              example: 8
+            gust_mph:
+              type: number
+              format: double
+              example: 11.6
+            gust_kph:
+              type: number
+              format: double
+              example: 18.7
+            air_quality:
+              type: object
+              additionalProperties: false
+              description: Air quality metrics (may be absent if provider disabled).
+              properties:
+                co:
+                  type: number
+                  format: double
+                  example: 293.70001220703125
+                no2:
+                  type: number
+                  format: double
+                  example: 18.5
+                o3:
+                  type: number
+                  format: double
+                  example: 234.60000610351562
+                so2:
+                  type: number
+                  format: double
+                  example: 12
+                pm2_5:
+                  type: number
+                  format: double
+                  example: 13.600000381469727
+                pm10:
+                  type: number
+                  format: double
+                  example: 15
+                us-epa-index:
+                  type: integer
+                  format: int32
+                  example: 1
+                gb-defra-index:
+                  type: integer
+                  format: int32
+                  example: 2
+
+  responses:
+    # Import common responses
+    BadRequest:
+      $ref: './common.yaml#/components/responses/BadRequest'
+    Unauthorized:
+      $ref: './common.yaml#/components/responses/Unauthorized'
+    RateLimitExceeded:
+      $ref: './common.yaml#/components/responses/RateLimitExceeded'
+    InternalError:
+      $ref: './common.yaml#/components/responses/InternalError'
