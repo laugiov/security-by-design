@@ -1,45 +1,45 @@
-# Guide de Demonstration SkyLink
+# SkyLink Demonstration Guide
 
-> **Duree estimee** : 10-15 minutes
-> **Prerequis** : Docker, curl, jq (optionnel)
+> **Estimated time**: 10-15 minutes
+> **Prerequisites**: Docker, curl, jq (optional)
 
 ---
 
-## Preparation
+## Setup
 
-### 1. Cloner et Configurer
+### 1. Clone and Configure
 
 ```bash
-# Cloner le projet
-git clone <repo-url> SkyLink
-cd SkyLink
+# Clone the project
+git clone <repo-url> skylink
+cd skylink
 
-# Copier le template d'environnement
+# Copy environment template
 cp .env.example .env
 
-# Generer les cles RSA (si pas deja fait)
+# Generate RSA keys (if not already done)
 openssl genrsa -out /tmp/private.pem 2048
 openssl rsa -in /tmp/private.pem -pubout -out /tmp/public.pem
 
-# Ajouter les cles au .env
+# Add keys to .env
 echo "PRIVATE_KEY_PEM=\"$(cat /tmp/private.pem)\"" >> .env
 echo "PUBLIC_KEY_PEM=\"$(cat /tmp/public.pem)\"" >> .env
 ```
 
-### 2. Demarrer la Stack
+### 2. Start the Stack
 
 ```bash
-# Construire et demarrer (premiere fois)
+# Build and start (first time)
 make build && make up
 
-# Ou simplement
+# Or simply
 docker compose up -d
 
-# Verifier que tout est UP
+# Verify everything is UP
 make status
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 NAME          STATUS    PORTS
 gateway       Up        0.0.0.0:8000->8000/tcp
@@ -49,13 +49,13 @@ contacts      Up        8003/tcp
 db            Up        5432/tcp
 ```
 
-### 3. Verifier la Sante
+### 3. Verify Health
 
 ```bash
 make health
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 Gateway:    healthy
 Telemetry:  healthy
@@ -66,21 +66,21 @@ PostgreSQL: UP
 
 ---
 
-## Demo 1 : Authentification JWT
+## Demo 1: JWT Authentication
 
-### Etape 1.1 : Obtenir un Token
+### Step 1.1: Obtain a Token
 
 ```bash
-# Generer un UUID pour le vehicule
+# Generate a UUID for the vehicle
 VEHICLE_ID=$(uuidgen || echo "550e8400-e29b-41d4-a716-446655440000")
 
-# Obtenir un token JWT
+# Get a JWT token
 curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
   -d "{\"vehicle_id\": \"$VEHICLE_ID\"}" | jq
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -89,25 +89,25 @@ curl -s -X POST http://localhost:8000/auth/token \
 }
 ```
 
-### Etape 1.2 : Sauvegarder le Token
+### Step 1.2: Save the Token
 
 ```bash
-# Extraire et sauvegarder le token
+# Extract and save the token
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
   -d "{\"vehicle_id\": \"$VEHICLE_ID\"}" | jq -r '.access_token')
 
-echo "Token obtenu : ${TOKEN:0:50}..."
+echo "Token obtained: ${TOKEN:0:50}..."
 ```
 
-### Etape 1.3 : Decoder le Token (Debug)
+### Step 1.3: Decode the Token (Debug)
 
 ```bash
-# Decoder le payload (base64)
+# Decode the payload (base64)
 echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "sub": "550e8400-e29b-41d4-a716-446655440000",
@@ -119,9 +119,9 @@ echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq
 
 ---
 
-## Demo 2 : Telemetrie avec Idempotence
+## Demo 2: Telemetry with Idempotency
 
-### Etape 2.1 : Envoyer un Evenement (201 Created)
+### Step 2.1: Send an Event (201 Created)
 
 ```bash
 EVENT_ID=$(uuidgen)
@@ -141,7 +141,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   }" -w "\nHTTP Status: %{http_code}\n"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "status": "created",
@@ -150,10 +150,10 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 HTTP Status: 201
 ```
 
-### Etape 2.2 : Renvoyer le Meme Evenement (200 OK - Idempotence)
+### Step 2.2: Resend the Same Event (200 OK - Idempotency)
 
 ```bash
-# Meme requete = meme resultat (idempotence)
+# Same request = same result (idempotency)
 curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -168,7 +168,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   }" -w "\nHTTP Status: %{http_code}\n"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "status": "duplicate",
@@ -177,10 +177,10 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 HTTP Status: 200
 ```
 
-### Etape 2.3 : Conflit d'Idempotence (409 Conflict)
+### Step 2.3: Idempotency Conflict (409 Conflict)
 
 ```bash
-# Meme event_id mais donnees differentes = conflit
+# Same event_id but different data = conflict
 curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -195,7 +195,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   }" -w "\nHTTP Status: %{http_code}\n"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "detail": {
@@ -208,25 +208,25 @@ HTTP Status: 409
 
 ---
 
-## Demo 3 : Rate Limiting
+## Demo 3: Rate Limiting
 
-> **Note** : Le rate limiting est configure sur `/weather/current` (60 req/min par vehicle_id).
+> **Note**: Rate limiting is configured on `/weather/current` (60 req/min per vehicle_id).
 
-### Etape 3.1 : Generer un Burst de Requetes
+### Step 3.1: Generate a Burst of Requests
 
 ```bash
-# Envoyer 70 requetes rapidement (limite = 60/min)
+# Send 70 requests quickly (limit = 60/min)
 for i in $(seq 1 70); do
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
     "http://localhost:8000/weather/current?lat=48.8566&lon=2.3522" \
     -H "Authorization: Bearer $TOKEN")
 
   if [ "$STATUS" = "429" ]; then
-    echo "Rate limit atteint a la requete $i (HTTP 429)"
+    echo "Rate limit reached at request $i (HTTP 429)"
     break
   fi
 
-  # Afficher progression
+  # Show progress
   if [ $i -le 5 ] || [ $i -ge 58 ]; then
     echo "Request $i: HTTP $STATUS"
   elif [ $i -eq 6 ]; then
@@ -235,7 +235,7 @@ for i in $(seq 1 70); do
 done
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 Request 1: HTTP 200
 Request 2: HTTP 200
@@ -243,18 +243,18 @@ Request 2: HTTP 200
 Request 58: HTTP 200
 Request 59: HTTP 200
 Request 60: HTTP 200
-Rate limit atteint a la requete 61 (HTTP 429)
+Rate limit reached at request 61 (HTTP 429)
 ```
 
-### Etape 3.2 : Verifier la Reponse 429
+### Step 3.2: Verify the 429 Response
 
 ```bash
-# La prochaine requete devrait etre limitee
+# The next request should be rate limited
 curl -s "http://localhost:8000/weather/current?lat=48.8566&lon=2.3522" \
   -H "Authorization: Bearer $TOKEN" -w "\nHTTP Status: %{http_code}\n"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "error": {
@@ -267,15 +267,15 @@ HTTP Status: 429
 
 ---
 
-## Demo 4 : Metriques Prometheus
+## Demo 4: Prometheus Metrics
 
-### Etape 4.1 : Acceder aux Metriques
+### Step 4.1: Access Metrics
 
 ```bash
 curl -s http://localhost:8000/metrics | grep -E "^(http_|rate_)" | head -20
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 # HELP http_requests_total Total number of requests by method, status and handler.
 # TYPE http_requests_total counter
@@ -288,31 +288,31 @@ http_requests_total{handler="/weather/current",method="GET",status="200"} 60.0
 rate_limit_exceeded_total 10.0
 ```
 
-### Etape 4.2 : Filtrer les Metriques
+### Step 4.2: Filter Metrics
 
 ```bash
-# Compteur de requetes par status
+# Request counter by status
 curl -s http://localhost:8000/metrics | grep "http_requests_total"
 
-# Compteur rate-limit
+# Rate-limit counter
 curl -s http://localhost:8000/metrics | grep "rate_limit_exceeded"
 
-# Latences
+# Latencies
 curl -s http://localhost:8000/metrics | grep "http_request_duration_seconds"
 ```
 
 ---
 
-## Demo 5 : Security Headers
+## Demo 5: Security Headers
 
-### Etape 5.1 : Verifier les Headers
+### Step 5.1: Verify Headers
 
 ```bash
-# Utiliser -D - pour afficher les headers (GET request)
+# Use -D - to display headers (GET request)
 curl -s -D - http://localhost:8000/health -o /dev/null
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 HTTP/1.1 200 OK
 content-type: application/json
@@ -327,24 +327,24 @@ referrer-policy: no-referrer
 permissions-policy: geolocation=(), microphone=(), camera=()
 ```
 
-### Etape 5.2 : Verifier la Tracabilite
+### Step 5.2: Verify Traceability
 
 ```bash
-# Envoyer un trace_id personnalise
+# Send a custom trace_id
 curl -s -D - http://localhost:8000/health \
   -H "X-Trace-Id: my-custom-trace-123" -o /dev/null | grep -i trace
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
 x-trace-id: my-custom-trace-123
 ```
 
 ---
 
-## Demo 6 : Validation Stricte
+## Demo 6: Strict Validation
 
-### Etape 6.1 : Champ Inconnu Rejete
+### Step 6.1: Unknown Field Rejected
 
 ```bash
 curl -s -X POST http://localhost:8000/auth/token \
@@ -355,7 +355,7 @@ curl -s -X POST http://localhost:8000/auth/token \
   }' | jq
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "error": {
@@ -374,7 +374,7 @@ curl -s -X POST http://localhost:8000/auth/token \
 }
 ```
 
-### Etape 6.2 : UUID Invalide Rejete
+### Step 6.2: Invalid UUID Rejected
 
 ```bash
 curl -s -X POST http://localhost:8000/auth/token \
@@ -382,7 +382,7 @@ curl -s -X POST http://localhost:8000/auth/token \
   -d '{"vehicle_id": "not-a-valid-uuid"}' | jq
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```json
 {
   "error": {
@@ -403,49 +403,49 @@ curl -s -X POST http://localhost:8000/auth/token \
 
 ---
 
-## Demo 7 : Service Weather
+## Demo 7: Weather Service
 
 ```bash
-# Obtenir la meteo (necessite lat/lon en query params)
+# Get weather (requires lat/lon query params)
 curl -s "http://localhost:8000/weather/current?lat=48.8566&lon=2.3522" \
   -H "Authorization: Bearer $TOKEN" | jq '.location.name, .current.temp_c, .current.condition.text'
 ```
 
-**Resultat attendu** (mode demo fixtures Paris) :
+**Expected output** (demo mode with Paris fixtures):
 ```json
 "Paris"
 15
 "Partly cloudy"
 ```
 
-> **Note** : La reponse complete inclut `location` (details ville) et `current` (temperature, conditions, vent, humidite, qualite air).
+> **Note**: The full response includes `location` (city details) and `current` (temperature, conditions, wind, humidity, air quality).
 
 ---
 
-## Demo 8 : Service Contacts
+## Demo 8: Contacts Service
 
 ```bash
-# Liste des contacts (format Google People API)
+# List contacts (Google People API format)
 curl -s "http://localhost:8000/contacts/?person_fields=names,emailAddresses" \
   -H "Authorization: Bearer $TOKEN" | jq '.items | length, .items[0].names[0].displayName'
 ```
 
-**Resultat attendu** (mode demo avec fixtures) :
+**Expected output** (demo mode with fixtures):
 ```json
 5
 "Alice Dupont"
 ```
 
-> **Note** : Les contacts utilisent le format Google People API. En mode demo, 5 contacts fictifs sont disponibles.
+> **Note**: Contacts use the Google People API format. In demo mode, 5 fictional contacts are available.
 
 ---
 
-## Demo 9 : Supply Chain Security (cosign)
+## Demo 9: Supply Chain Security (cosign)
 
-> **Prerequis** : Cette demo fonctionne apres que le pipeline CI ait signe l'image.
-> En local, vous pouvez simuler la verification avec une image signee.
+> **Prerequisites**: This demo works after the CI pipeline has signed the image.
+> Locally, you can simulate verification with a signed image.
 
-### Etape 9.1 : Installer cosign (si necessaire)
+### Step 9.1: Install cosign (if needed)
 
 ```bash
 # macOS
@@ -454,24 +454,24 @@ brew install cosign
 # Linux (via Go)
 go install github.com/sigstore/cosign/v2/cmd/cosign@latest
 
-# Ou via Docker
+# Or via Docker
 alias cosign='docker run --rm gcr.io/projectsigstore/cosign:latest'
 ```
 
-### Etape 9.2 : Verifier la Signature de l'Image
+### Step 9.2: Verify the Image Signature
 
 ```bash
-# Remplacer par votre registry GitLab
-REGISTRY="registry.gitlab.com/votre-groupe/skylink"
+# Replace with your GitLab registry
+REGISTRY="registry.gitlab.com/your-group/skylink"
 IMAGE_TAG="latest"
 
-# Verifier avec la cle publique
+# Verify with the public key
 cosign verify --key cosign.pub "$REGISTRY:$IMAGE_TAG"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
-Verification for registry.gitlab.com/votre-groupe/skylink:latest --
+Verification for registry.gitlab.com/your-group/skylink:latest --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
@@ -479,19 +479,19 @@ The following checks were performed on each of these signatures:
 [{"critical":{"identity":{"docker-reference":"registry.gitlab.com/..."},...}]
 ```
 
-### Etape 9.3 : Verifier l'Attestation SBOM
+### Step 9.3: Verify the SBOM Attestation
 
 ```bash
-# Verifier que le SBOM CycloneDX est attache
+# Verify that the CycloneDX SBOM is attached
 cosign verify-attestation \
   --key cosign.pub \
   --type cyclonedx \
   "$REGISTRY:$IMAGE_TAG"
 ```
 
-**Resultat attendu** :
+**Expected output**:
 ```
-Verification for registry.gitlab.com/votre-groupe/skylink:latest --
+Verification for registry.gitlab.com/your-group/skylink:latest --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
@@ -499,10 +499,10 @@ The following checks were performed on each of these signatures:
 {"payloadType":"application/vnd.in-toto+json","payload":"..."}
 ```
 
-### Etape 9.4 : Extraire le SBOM de l'Attestation
+### Step 9.4: Extract the SBOM from the Attestation
 
 ```bash
-# Telecharger et decoder l'attestation SBOM
+# Download and decode the SBOM attestation
 cosign verify-attestation \
   --key cosign.pub \
   --type cyclonedx \
@@ -512,7 +512,7 @@ cosign verify-attestation \
   | jq '.predicate'
 ```
 
-**Resultat attendu** (extrait) :
+**Expected output** (excerpt):
 ```json
 {
   "bomFormat": "CycloneDX",
@@ -526,13 +526,13 @@ cosign verify-attestation \
 }
 ```
 
-### Etape 9.5 : Verification en Mode CI (sans cle)
+### Step 9.5: Verification in CI Mode (without key file)
 
 ```bash
-# Dans le pipeline GitLab, la cle publique est en variable CI
-# La verification est automatique apres attest_sbom
+# In the GitLab pipeline, the public key is a CI variable
+# Verification is automatic after attest_sbom
 
-# Pour simuler localement avec la variable CI:
+# To simulate locally with the CI variable:
 echo "$COSIGN_PUBLIC_KEY" > /tmp/cosign.pub
 cosign verify --key /tmp/cosign.pub "$REGISTRY:$IMAGE_TAG"
 rm /tmp/cosign.pub
@@ -540,21 +540,21 @@ rm /tmp/cosign.pub
 
 ---
 
-## Nettoyage
+## Cleanup
 
 ```bash
-# Arreter les services
+# Stop services
 make down
 
-# Supprimer tout (containers, volumes, images)
+# Remove everything (containers, volumes, images)
 make clean
 ```
 
 ---
 
-## Captures CI/CD
+## CI/CD Pipeline Overview
 
-### Pipeline GitLab
+### GitLab Pipeline
 
 ```
 Stages: lint -> test -> build -> scan -> sbom -> security-scan -> sign
@@ -563,57 +563,57 @@ Jobs:
 - lint:ruff            : OK (0 errors)
 - lint:black           : OK (formatted)
 - lint:bandit          : OK (0 HIGH)
-- test:pytest          : OK (307 tests, 81% coverage)
+- test:pytest          : OK (323 tests, 82% coverage)
 - build:docker         : OK (4 images)
 - scan:trivy           : OK (0 CRITICAL)
 - scan:gitleaks        : OK (0 secrets)
 - scan:pip-audit       : OK (0 vulns)
-- sbom:cyclonedx       : OK (artefact genere)
+- sbom:cyclonedx       : OK (artifact generated)
 - dast:zap             : OK (baseline)
-- sign:sign_image      : OK (image signee cosign)
-- sign:attest_sbom     : OK (SBOM attache)
-- sign:verify_signature: OK (signature verifiee)
+- sign:sign_image      : OK (image signed with cosign)
+- sign:attest_sbom     : OK (SBOM attached)
+- sign:verify_signature: OK (signature verified)
 ```
 
-### Artefacts CI
+### CI Artifacts
 
-| Artefact | Description |
+| Artifact | Description |
 |----------|-------------|
 | `sbom.json` | Software Bill of Materials (CycloneDX) |
-| `trivy-report.json` | Scan vulnerabilites images |
-| `zap-report.html` | Rapport DAST ZAP |
-| `coverage.xml` | Rapport coverage pytest |
+| `trivy-report.json` | Container vulnerability scan |
+| `zap-report.html` | DAST ZAP report |
+| `coverage.xml` | pytest coverage report |
 
 ---
 
-## Resume des Codes HTTP
+## HTTP Status Code Summary
 
-| Code | Demo | Signification |
-|------|------|---------------|
-| 200 | Token, Doublon | Succes |
-| 201 | Telemetrie | Ressource creee |
-| 400 | Validation | Champ invalide |
-| 401 | Token expire | Non authentifie |
-| 409 | Conflit | Idempotence violee |
-| 429 | Rate limit | Trop de requetes |
+| Code | Demo | Meaning |
+|------|------|---------|
+| 200 | Token, Duplicate | Success |
+| 201 | Telemetry | Resource created |
+| 400 | Validation | Invalid field |
+| 401 | Expired token | Unauthenticated |
+| 409 | Conflict | Idempotency violated |
+| 429 | Rate limit | Too many requests |
 
 ---
 
-## Checklist Demo
+## Demo Checklist
 
-- [ ] Stack demarre (`make up`)
+- [ ] Stack started (`make up`)
 - [ ] Health check OK (`make health`)
-- [ ] Token JWT obtenu
-- [ ] Telemetrie 201 Created
-- [ ] Idempotence 200 OK (doublon)
-- [ ] Conflit 409 (donnees differentes)
+- [ ] JWT token obtained
+- [ ] Telemetry 201 Created
+- [ ] Idempotency 200 OK (duplicate)
+- [ ] Conflict 409 (different data)
 - [ ] Rate limit 429
-- [ ] Metriques /metrics
-- [ ] Security headers presents
-- [ ] Validation stricte (champs extra rejetes)
-- [ ] Signature image verifiee (cosign verify)
-- [ ] Attestation SBOM verifiee (cosign verify-attestation)
+- [ ] Metrics /metrics
+- [ ] Security headers present
+- [ ] Strict validation (extra fields rejected)
+- [ ] Image signature verified (cosign verify)
+- [ ] SBOM attestation verified (cosign verify-attestation)
 
 ---
 
-**Guide de demonstration SkyLink - v1.1.0** (avec Supply Chain Security)
+**SkyLink Demonstration Guide** (with Supply Chain Security)

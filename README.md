@@ -2,9 +2,14 @@
 
 > A **microservices** platform demonstrating **Security by Design** principles for connected aviation telemetry systems.
 
-[![Pipeline](https://img.shields.io/badge/CI-GitLab%20CI-orange)](#cicd-security-pipeline)
-[![Python](https://img.shields.io/badge/Python-3.12-blue)](#technology-stack)
-[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#technology-stack)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.120-009688?logo=fastapi&logoColor=white)](#technology-stack)
+[![License](https://img.shields.io/badge/License-MIT-green)](#license)
+[![Security](https://img.shields.io/badge/Security-SAST%20|%20SCA%20|%20DAST-blueviolet)](#cicd-security-pipeline)
+[![OWASP](https://img.shields.io/badge/OWASP-Headers%20Compliant-orange?logo=owasp&logoColor=white)](#4-owasp-security-headers)
+[![Docker](https://img.shields.io/badge/Docker-Rootless-2496ED?logo=docker&logoColor=white)](#quick-start)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ---
 
