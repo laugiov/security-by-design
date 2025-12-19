@@ -33,7 +33,7 @@ services:
     networks:
       - skylink-net
 
-  # Telemetry Service - Vehicle telemetry ingestion (port 8001)
+  # Telemetry Service - Aircraft telemetry ingestion (port 8001)
   telemetry:
     build:
       context: .

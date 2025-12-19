@@ -71,13 +71,13 @@ PostgreSQL: UP
 ### Step 1.1: Obtain a Token
 
 ```bash
-# Generate a UUID for the vehicle
-VEHICLE_ID=$(uuidgen || echo "550e8400-e29b-41d4-a716-446655440000")
+# Generate a UUID for the aircraft
+AIRCRAFT_ID=$(uuidgen || echo "550e8400-e29b-41d4-a716-446655440000")
 
 # Get a JWT token
 curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
-  -d "{\"vehicle_id\": \"$VEHICLE_ID\"}" | jq
+  -d "{\"aircraft_id\": \"$AIRCRAFT_ID\"}" | jq
 ```
 
 **Expected output**:
@@ -95,7 +95,7 @@ curl -s -X POST http://localhost:8000/auth/token \
 # Extract and save the token
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
-  -d "{\"vehicle_id\": \"$VEHICLE_ID\"}" | jq -r '.access_token')
+  -d "{\"aircraft_id\": \"$AIRCRAFT_ID\"}" | jq -r '.access_token')
 
 echo "Token obtained: ${TOKEN:0:50}..."
 ```
@@ -131,7 +131,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"vehicle_id\": \"$VEHICLE_ID\",
+    \"aircraft_id\": \"$AIRCRAFT_ID\",
     \"event_id\": \"$EVENT_ID\",
     \"ts\": \"$TS\",
     \"metrics\": {
@@ -158,7 +158,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"vehicle_id\": \"$VEHICLE_ID\",
+    \"aircraft_id\": \"$AIRCRAFT_ID\",
     \"event_id\": \"$EVENT_ID\",
     \"ts\": \"$TS\",
     \"metrics\": {
@@ -185,7 +185,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"vehicle_id\": \"$VEHICLE_ID\",
+    \"aircraft_id\": \"$AIRCRAFT_ID\",
     \"event_id\": \"$EVENT_ID\",
     \"ts\": \"$TS\",
     \"metrics\": {
@@ -210,7 +210,7 @@ HTTP Status: 409
 
 ## Demo 3: Rate Limiting
 
-> **Note**: Rate limiting is configured on `/weather/current` (60 req/min per vehicle_id).
+> **Note**: Rate limiting is configured on `/weather/current` (60 req/min per aircraft_id).
 
 ### Step 3.1: Generate a Burst of Requests
 
@@ -350,7 +350,7 @@ x-trace-id: my-custom-trace-123
 curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
   -d '{
-    "vehicle_id": "550e8400-e29b-41d4-a716-446655440000",
+    "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
     "unknown_field": "malicious"
   }' | jq
 ```
@@ -379,7 +379,7 @@ curl -s -X POST http://localhost:8000/auth/token \
 ```bash
 curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
-  -d '{"vehicle_id": "not-a-valid-uuid"}' | jq
+  -d '{"aircraft_id": "not-a-valid-uuid"}' | jq
 ```
 
 **Expected output**:
@@ -391,7 +391,7 @@ curl -s -X POST http://localhost:8000/auth/token \
     "details": {
       "fields": [
         {
-          "field": "vehicle_id",
+          "field": "aircraft_id",
           "issue": "uuid_parsing",
           "message": "Input should be a valid UUID"
         }

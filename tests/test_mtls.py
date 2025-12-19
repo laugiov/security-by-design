@@ -185,13 +185,13 @@ class TestExtractClientCN:
                 (("stateOrProvinceName", "IDF"),),
                 (("localityName", "Paris"),),
                 (("organizationName", "SkyLink"),),
-                (("organizationalUnitName", "Vehicles"),),
-                (("commonName", "vehicle-001"),),
+                (("organizationalUnitName", "Aircrafts"),),
+                (("commonName", "aircraft-001"),),
             ),
         }
 
         result = extract_client_cn(cert)
-        assert result == "vehicle-001"
+        assert result == "aircraft-001"
 
     def test_extract_cn_uuid_format(self):
         """Should extract UUID-format CN."""
@@ -208,13 +208,13 @@ class TestExtractClientCN:
             "subject": (
                 (
                     ("organizationName", "SkyLink"),
-                    ("commonName", "vehicle-test"),
+                    ("commonName", "aircraft-test"),
                 ),
             ),
         }
 
         result = extract_client_cn(cert)
-        assert result == "vehicle-test"
+        assert result == "aircraft-test"
 
 
 class TestExtractClientCertInfo:
@@ -233,7 +233,7 @@ class TestExtractClientCertInfo:
     def test_extract_info_full_cert(self):
         """Should extract all available info from certificate."""
         cert = {
-            "subject": ((("commonName", "vehicle-001"),),),
+            "subject": ((("commonName", "aircraft-001"),),),
             "issuer": ((("commonName", "SkyLink Root CA"),),),
             "notBefore": "Dec  1 00:00:00 2024 GMT",
             "notAfter": "Dec  1 00:00:00 2025 GMT",
@@ -242,7 +242,7 @@ class TestExtractClientCertInfo:
 
         result = extract_client_cert_info(cert)
 
-        assert result["cn"] == "vehicle-001"
+        assert result["cn"] == "aircraft-001"
         assert result["issuer"] == "SkyLink Root CA"
         assert result["not_before"] == "Dec  1 00:00:00 2024 GMT"
         assert result["not_after"] == "Dec  1 00:00:00 2025 GMT"
@@ -251,12 +251,12 @@ class TestExtractClientCertInfo:
     def test_extract_info_partial_cert(self):
         """Should handle certificate with missing optional fields."""
         cert = {
-            "subject": ((("commonName", "vehicle-002"),),),
+            "subject": ((("commonName", "aircraft-002"),),),
         }
 
         result = extract_client_cert_info(cert)
 
-        assert result["cn"] == "vehicle-002"
+        assert result["cn"] == "aircraft-002"
         assert "issuer" not in result
         assert "not_before" not in result
 

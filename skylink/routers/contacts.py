@@ -41,14 +41,14 @@ async def list_contacts(
     Raises:
         HTTPException: If contacts service is unavailable or returns error
     """
-    # Extract vehicle_id from JWT (claim "sub")
-    vehicle_id = token.get("sub")
+    # Extract aircraft_id from JWT (claim "sub")
+    aircraft_id = token.get("sub")
 
     try:
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT) as client:
             response = await client.get(
                 f"{CONTACTS_SERVICE_URL}/v1/contacts",
-                headers={"X-Vehicle-Id": vehicle_id},  # Pass vehicle_id to service
+                headers={"X-Aircraft-Id": aircraft_id},  # Pass aircraft_id to service
                 params={"person_fields": person_fields, "page": page, "size": size},
             )
 

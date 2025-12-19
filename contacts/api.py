@@ -33,8 +33,8 @@ async def list_contacts(
     ),
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
     size: int = Query(10, ge=1, le=100, description="Items per page (1-100)"),
-    x_vehicle_id: Optional[UUID] = Header(
-        None, alias="X-Vehicle-Id", description="Vehicle ID from JWT"
+    x_aircraft_id: Optional[UUID] = Header(
+        None, alias="X-Aircraft-Id", description="Aircraft ID from JWT"
     ),
 ) -> ContactsListResponse:
     """List contacts from Google People API with OAuth2 authentication.
@@ -42,7 +42,7 @@ async def list_contacts(
     **Demo Mode**: If DEMO_MODE=true, returns static fixtures (no OAuth required).
 
     **Production Mode**: Uses OAuth2 flow to fetch real Google contacts:
-    1. Check if vehicle has configured OAuth tokens
+    1. Check if aircraft has configured OAuth tokens
     2. Auto-refresh access_token if expired
     3. Call Google People API
     4. Handle errors appropriately
@@ -51,13 +51,13 @@ async def list_contacts(
         person_fields: Google People field mask (e.g., "names,emailAddresses")
         page: Page number (1-indexed, for pagination)
         size: Items per page (1-100)
-        x_vehicle_id: Vehicle UUID from X-Vehicle-Id header (injected by gateway, optional in DEMO_MODE)
+        x_aircraft_id: Aircraft UUID from X-Aircraft-Id header (injected by gateway, optional in DEMO_MODE)
 
     Returns:
         ContactsListResponse with contacts and pagination info
 
     Raises:
-        404: Vehicle not configured (no OAuth tokens)
+        404: Aircraft not configured (no OAuth tokens)
         401: OAuth tokens expired/revoked (user must re-authorize)
         429: Google API quota exceeded (retry later)
         503: Google API temporarily unavailable
@@ -92,11 +92,11 @@ async def list_contacts(
 
     # ==================== PRODUCTION MODE (OAuth) ====================
 
-    # Check that X-Vehicle-Id is provided in production mode
-    if x_vehicle_id is None:
+    # Check that X-Aircraft-Id is provided in production mode
+    if x_aircraft_id is None:
         raise HTTPException(
             status_code=400,
-            detail="X-Vehicle-Id header is required in production mode",
+            detail="X-Aircraft-Id header is required in production mode",
         )
 
     # 1. Get tokens from database
@@ -104,20 +104,20 @@ async def list_contacts(
     token_storage = TokenStorage(db)
 
     try:
-        tokens = await token_storage.get(x_vehicle_id)
+        tokens = await token_storage.get(x_aircraft_id)
 
         if tokens is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
-                    "code": "VEHICLE_NOT_CONFIGURED",
+                    "code": "AIRCRAFT_NOT_CONFIGURED",
                     "message": "Please configure your Google account in the mobile app",
                     "action": "configure_google_account",
                 },
             )
 
         # 2. Check if access_token is expired and refresh if needed
-        is_expired = await token_storage.is_expired(x_vehicle_id)
+        is_expired = await token_storage.is_expired(x_aircraft_id)
 
         if is_expired:
             # Auto-refresh access_token
@@ -133,7 +133,7 @@ async def list_contacts(
                     "expires_at": datetime.now(timezone.utc)
                     + timedelta(seconds=refreshed_tokens["expires_in"]),
                 }
-                await token_storage.save(x_vehicle_id, updated_tokens)
+                await token_storage.save(x_aircraft_id, updated_tokens)
 
                 tokens = updated_tokens
 
@@ -229,7 +229,7 @@ async def list_contacts(
 @router.post("/oauth/callback", status_code=status.HTTP_200_OK)
 async def oauth_callback(
     code: str = Query(..., description="OAuth authorization code from Google"),
-    vehicle_id: UUID = Query(..., description="Vehicle ID to associate tokens with"),
+    aircraft_id: UUID = Query(..., description="Aircraft ID to associate tokens with"),
 ):
     """OAuth callback endpoint for initial Google account configuration.
 
@@ -239,13 +239,13 @@ async def oauth_callback(
     1. Mobile app redirects user to Google OAuth consent screen
     2. User authorizes access
     3. Google redirects back with authorization code
-    4. Mobile app calls this endpoint with code + vehicle_id
+    4. Mobile app calls this endpoint with code + aircraft_id
     5. We exchange code for access/refresh tokens
     6. We save tokens in database (refresh_token encrypted)
 
     Args:
         code: Authorization code from Google OAuth
-        vehicle_id: Vehicle UUID to associate with these tokens
+        aircraft_id: Aircraft UUID to associate with these tokens
 
     Returns:
         Success message
@@ -294,12 +294,12 @@ async def oauth_callback(
         }
 
         # 4. Save tokens in database (refresh_token will be encrypted automatically)
-        await token_storage.save(vehicle_id, tokens_to_save)
+        await token_storage.save(aircraft_id, tokens_to_save)
 
         return {
             "success": True,
             "message": "Google account configured successfully",
-            "vehicle_id": str(vehicle_id),
+            "aircraft_id": str(aircraft_id),
         }
 
     finally:

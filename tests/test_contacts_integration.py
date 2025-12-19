@@ -38,8 +38,8 @@ with open(FIXTURES_DIR / "google_responses.json") as f:
 
 
 @pytest.fixture
-def test_vehicle_id() -> UUID:
-    """Return a test vehicle UUID."""
+def test_aircraft_id() -> UUID:
+    """Return a test aircraft UUID."""
     return uuid4()
 
 
@@ -70,14 +70,14 @@ def test_client(test_db_session):
 
 
 @pytest.fixture
-def mock_valid_tokens(test_vehicle_id) -> dict:
+def mock_valid_tokens(test_aircraft_id) -> dict:
     """Return mock valid OAuth tokens."""
     # Use timezone-aware UTC with Python 3.10 compatibility
     from datetime import timezone
 
     now = datetime.now(timezone.utc)
     return {
-        "vehicle_id": str(test_vehicle_id),
+        "aircraft_id": str(test_aircraft_id),
         "access_token": "ya29.mock_access_token_valid",
         "refresh_token": "1//mock_refresh_token_valid",
         "expires_at": now + timedelta(hours=1),  # Valid for 1 hour
@@ -87,14 +87,14 @@ def mock_valid_tokens(test_vehicle_id) -> dict:
 
 
 @pytest.fixture
-def mock_expired_tokens(test_vehicle_id) -> dict:
+def mock_expired_tokens(test_aircraft_id) -> dict:
     """Return mock expired OAuth tokens."""
     # Use timezone-aware UTC with Python 3.10 compatibility
     from datetime import timezone
 
     now = datetime.now(timezone.utc)
     return {
-        "vehicle_id": str(test_vehicle_id),
+        "aircraft_id": str(test_aircraft_id),
         "access_token": "ya29.mock_access_token_expired",
         "refresh_token": "1//mock_refresh_token_valid",
         "expires_at": now - timedelta(hours=1),  # Expired 1 hour ago
@@ -107,12 +107,12 @@ class TestContactsIntegrationDemoMode:
     """Test suite for demo mode (no OAuth required)."""
 
     @patch("contacts.api.settings.demo_mode", True)
-    def test_list_contacts_demo_mode_success(self, test_client, test_vehicle_id):
+    def test_list_contacts_demo_mode_success(self, test_client, test_aircraft_id):
         """Test listing contacts in demo mode returns fixtures."""
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names,emailAddresses", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -131,13 +131,13 @@ class TestContactsIntegrationDemoMode:
         assert "total" in pagination
 
     @patch("contacts.api.settings.demo_mode", True)
-    def test_list_contacts_demo_mode_pagination(self, test_client, test_vehicle_id):
+    def test_list_contacts_demo_mode_pagination(self, test_client, test_aircraft_id):
         """Test pagination works in demo mode."""
         # Page 1
         response1 = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 5},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
         assert response1.status_code == status.HTTP_200_OK
         data1 = response1.json()
@@ -148,7 +148,7 @@ class TestContactsIntegrationDemoMode:
         response2 = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 2, "size": 5},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
         assert response2.status_code == status.HTTP_200_OK
         data2 = response2.json()
@@ -182,7 +182,7 @@ class TestContactsIntegrationOAuthCallback:
         mock_validate_scopes,
         mock_exchange,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
     ):
         """Test successful OAuth callback saves tokens to database."""
         # Mock OAuth client responses
@@ -192,14 +192,14 @@ class TestContactsIntegrationOAuthCallback:
 
         response = test_client.post(
             "/oauth/callback",
-            params={"code": "mock_authorization_code", "vehicle_id": str(test_vehicle_id)},
+            params={"code": "mock_authorization_code", "aircraft_id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
         assert data["message"] == "Google account configured successfully"
-        assert data["vehicle_id"] == str(test_vehicle_id)
+        assert data["aircraft_id"] == str(test_aircraft_id)
 
         # Verify OAuth exchange was called
         mock_exchange.assert_called_once_with("mock_authorization_code")
@@ -217,13 +217,13 @@ class TestContactsIntegrationOAuthCallback:
         },
     )
     @patch("contacts.oauth.GoogleOAuthClient.exchange_code_for_tokens")
-    async def test_oauth_callback_invalid_code(self, mock_exchange, test_client, test_vehicle_id):
+    async def test_oauth_callback_invalid_code(self, mock_exchange, test_client, test_aircraft_id):
         """Test OAuth callback with invalid authorization code."""
         mock_exchange.side_effect = InvalidCodeError("Invalid authorization code")
 
         response = test_client.post(
             "/oauth/callback",
-            params={"code": "invalid_code", "vehicle_id": str(test_vehicle_id)},
+            params={"code": "invalid_code", "aircraft_id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -242,7 +242,7 @@ class TestContactsIntegrationOAuthCallback:
     @patch("contacts.oauth.GoogleOAuthClient.exchange_code_for_tokens")
     @patch("contacts.oauth.GoogleOAuthClient.validate_scopes")
     async def test_oauth_callback_insufficient_scopes(
-        self, mock_validate_scopes, mock_exchange, test_client, test_vehicle_id
+        self, mock_validate_scopes, mock_exchange, test_client, test_aircraft_id
     ):
         """Test OAuth callback when user doesn't grant required scopes."""
         mock_exchange.return_value = GOOGLE_FIXTURES["oauth_token_success"]
@@ -250,7 +250,7 @@ class TestContactsIntegrationOAuthCallback:
 
         response = test_client.post(
             "/oauth/callback",
-            params={"code": "mock_code", "vehicle_id": str(test_vehicle_id)},
+            params={"code": "mock_code", "aircraft_id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -271,7 +271,7 @@ class TestContactsIntegrationProductionMode:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test listing contacts with valid OAuth token (no refresh needed)."""
@@ -285,7 +285,7 @@ class TestContactsIntegrationProductionMode:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names,emailAddresses", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -294,28 +294,28 @@ class TestContactsIntegrationProductionMode:
         assert "pagination" in data
 
         # Verify token was retrieved
-        mock_token_get.assert_called_once_with(test_vehicle_id)
+        mock_token_get.assert_called_once_with(test_aircraft_id)
 
         # Verify Google API was called
         mock_list_contacts.assert_called_once()
 
     @patch("contacts.api.settings.demo_mode", False)
     @patch("contacts.api.TokenStorage.get")
-    async def test_list_contacts_vehicle_not_configured(
-        self, mock_token_get, test_client, test_vehicle_id
+    async def test_list_contacts_aircraft_not_configured(
+        self, mock_token_get, test_client, test_aircraft_id
     ):
-        """Test listing contacts when vehicle has no OAuth tokens configured."""
+        """Test listing contacts when aircraft has no OAuth tokens configured."""
         mock_token_get.return_value = None  # No tokens found
 
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
-        assert data["detail"]["code"] == "VEHICLE_NOT_CONFIGURED"
+        assert data["detail"]["code"] == "AIRCRAFT_NOT_CONFIGURED"
         assert "configure your Google account" in data["detail"]["message"]
 
     @patch("contacts.api.settings.demo_mode", False)
@@ -340,7 +340,7 @@ class TestContactsIntegrationProductionMode:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_expired_tokens,
     ):
         """Test auto-refresh when access token is expired."""
@@ -360,7 +360,7 @@ class TestContactsIntegrationProductionMode:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -392,7 +392,7 @@ class TestContactsIntegrationProductionMode:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_expired_tokens,
     ):
         """Test when refresh token has been revoked by user."""
@@ -405,7 +405,7 @@ class TestContactsIntegrationProductionMode:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -427,7 +427,7 @@ class TestContactsIntegrationErrorHandling:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test when Google returns 401 (invalid access token)."""
@@ -440,7 +440,7 @@ class TestContactsIntegrationErrorHandling:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -457,7 +457,7 @@ class TestContactsIntegrationErrorHandling:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test when Google API quota is exceeded (429)."""
@@ -470,7 +470,7 @@ class TestContactsIntegrationErrorHandling:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
@@ -489,7 +489,7 @@ class TestContactsIntegrationErrorHandling:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test when Google API is temporarily unavailable (503)."""
@@ -502,7 +502,7 @@ class TestContactsIntegrationErrorHandling:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
@@ -519,7 +519,7 @@ class TestContactsIntegrationErrorHandling:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test when Google API request times out."""
@@ -532,7 +532,7 @@ class TestContactsIntegrationErrorHandling:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_504_GATEWAY_TIMEOUT
@@ -549,7 +549,7 @@ class TestContactsIntegrationErrorHandling:
         mock_is_expired,
         mock_token_get,
         test_client,
-        test_vehicle_id,
+        test_aircraft_id,
         mock_valid_tokens,
     ):
         """Test when Google API returns other errors (502)."""
@@ -562,7 +562,7 @@ class TestContactsIntegrationErrorHandling:
         response = test_client.get(
             "/v1/contacts",
             params={"person_fields": "names", "page": 1, "size": 10},
-            headers={"X-Vehicle-Id": str(test_vehicle_id)},
+            headers={"X-Aircraft-Id": str(test_aircraft_id)},
         )
 
         assert response.status_code == status.HTTP_502_BAD_GATEWAY

@@ -33,7 +33,7 @@ class GooglePersonMetadata(BaseModel):
 
     deleted: Optional[StrictBool] = Field(
         default=None,
-        description="Vrai si le contact a été supprimé (cas de sync incrémentale).",
+        description="True if the contact has been deleted (incremental sync case).",
     )
     __properties: ClassVar[List[str]] = ["deleted"]
 

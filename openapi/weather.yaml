@@ -52,13 +52,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [vehicle_id]
+              required: [aircraft_id]
               additionalProperties: false
               properties:
-                vehicle_id:
+                aircraft_id:
                   type: string
                   format: uuid
-                  description: Unique identifier of the vehicle/client
+                  description: Unique identifier of the aircraft/client
                   example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
@@ -153,7 +153,7 @@ components:
       bearerFormat: JWT
       description: |
         JWT token with RS256 signature.
-        Claims: sub (vehicle_id), aud=weather, iat, exp (max 15 min)
+        Claims: sub (aircraft_id), aud=weather, iat, exp (max 15 min)
   schemas:
     # Import common Error schema
     Error:

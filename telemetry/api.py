@@ -1,4 +1,4 @@
-"""Endpoints API du service de télémétrie."""
+"""Telemetry service API endpoints."""
 
 import jwt  # PyJWT
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
@@ -14,10 +14,10 @@ from telemetry.schemas import (
 
 router = APIRouter()
 
-# Repo simple en mémoire (à remplacer par un vrai repo DB)
+# Simple in-memory repository (to be replaced with real DB repo)
 repo = InMemoryTelemetryRepository()
 
-# Schéma de sécurité HTTP Bearer pour /telemetry
+# HTTP Bearer security scheme for /telemetry
 bearer_scheme = HTTPBearer(auto_error=True)
 
 
@@ -25,11 +25,11 @@ bearer_scheme = HTTPBearer(auto_error=True)
 
 
 async def verify_bearer_token(authorization: str | None = Header(default=None)) -> dict:
-    """Vérifie le token JWT signé par la Gateway avec la clé publique.
+    """Verify the JWT token signed by the Gateway with the public key.
 
-    - Attend un header Authorization: Bearer <token>
-    - Vérifie algorithme, audience, exp, etc.
-    - Retourne les claims si tout est OK.
+    - Expects an Authorization: Bearer <token> header
+    - Verifies algorithm, audience, exp, etc.
+    - Returns claims if everything is OK.
     """
     if not authorization:
         raise HTTPException(
@@ -97,18 +97,18 @@ async def ingest_telemetry(
     claims: dict = Depends(verify_bearer_token),
     response: Response = None,
 ):
-    vehicle_id_from_token = claims.get("sub")
-    # Optionnel : vérifier cohérence
-    if vehicle_id_from_token and vehicle_id_from_token != str(event.vehicle_id):
+    aircraft_id_from_token = claims.get("sub")
+    # Optional: verify consistency
+    if aircraft_id_from_token and aircraft_id_from_token != str(event.aircraft_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="vehicle_id mismatch between token and payload",
+            detail="aircraft_id mismatch between token and payload",
         )
-    existing = await repo.get(event.vehicle_id, event.event_id)
+    existing = await repo.get(event.aircraft_id, event.event_id)
 
     if existing is None:
         await repo.insert(event)
-        # force le 201 ici
+        # force 201 here
         if response is not None:
             response.status_code = status.HTTP_201_CREATED
         return TelemetryIngestResponse(
@@ -117,13 +117,13 @@ async def ingest_telemetry(
         )
 
     if existing == event:
-        # FastAPI renverra 200 par défaut
+        # FastAPI returns 200 by default
         return TelemetryIngestResponse(
             status="duplicate",
             event_id=event.event_id,
         )
 
-    # Même event_id mais contenu différent → conflit
+    # Same event_id but different content -> conflict
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
         detail=Error(

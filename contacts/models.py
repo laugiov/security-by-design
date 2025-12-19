@@ -40,20 +40,20 @@ class JSONEncodedList(TypeDecorator):
 
 
 class OAuthToken(Base):
-    """OAuth tokens table for storing Google OAuth credentials per vehicle.
+    """OAuth tokens table for storing Google OAuth credentials per aircraft.
 
-    Stores access_token and refresh_token for each vehicle_id.
+    Stores access_token and refresh_token for each aircraft_id.
     The refresh_token is encrypted at rest using AES-256-GCM.
     """
 
     __tablename__ = "oauth_tokens"
 
-    # Primary key: vehicle_id from JWT
-    vehicle_id = Column(
+    # Primary key: aircraft_id from JWT
+    aircraft_id = Column(
         PGUUID(as_uuid=True),
         primary_key=True,
         nullable=False,
-        comment="Vehicle UUID from JWT token",
+        comment="Aircraft UUID from JWT token",
     )
 
     # OAuth provider (always 'google' for now)
@@ -117,7 +117,7 @@ class OAuthToken(Base):
     def __repr__(self) -> str:
         """String representation (safe - no tokens exposed)."""
         return (
-            f"<OAuthToken(vehicle_id={self.vehicle_id}, "
+            f"<OAuthToken(aircraft_id={self.aircraft_id}, "
             f"provider={self.provider}, "
             f"expires_at={self.expires_at})>"
         )
@@ -133,7 +133,7 @@ class OAuthToken(Base):
             Dictionary representation of the token
         """
         return {
-            "vehicle_id": str(self.vehicle_id),
+            "aircraft_id": str(self.aircraft_id),
             "provider": self.provider,
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,  # Returns encrypted unless specified

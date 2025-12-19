@@ -32,8 +32,8 @@ class ContactsObtainTokenRequest(BaseModel):
     ContactsObtainTokenRequest
     """  # noqa: E501
 
-    vehicle_id: UUID = Field(description="Unique identifier of the client")
-    __properties: ClassVar[List[str]] = ["vehicle_id"]
+    aircraft_id: UUID = Field(description="Unique identifier of the client")
+    __properties: ClassVar[List[str]] = ["aircraft_id"]
 
     model_config = {
         "populate_by_name": True,
@@ -81,5 +81,5 @@ class ContactsObtainTokenRequest(BaseModel):
         if not isinstance(obj, dict):
             return cls.model_validate(obj)
 
-        _obj = cls.model_validate({"vehicle_id": obj.get("vehicle_id")})
+        _obj = cls.model_validate({"aircraft_id": obj.get("aircraft_id")})
         return _obj

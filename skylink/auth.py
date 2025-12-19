@@ -31,9 +31,9 @@ class TokenRequest(BaseModel):
 
     model_config = {"extra": "forbid"}  # Reject unknown fields (Security by Design)
 
-    vehicle_id: UUID = Field(
+    aircraft_id: UUID = Field(
         ...,
-        description="Unique identifier of the vehicle",
+        description="Unique identifier of the aircraft",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
 
@@ -57,11 +57,11 @@ class TokenResponse(BaseModel):
     )
 
 
-def create_access_token(vehicle_id: str) -> str:
+def create_access_token(aircraft_id: str) -> str:
     """Create a new JWT access token signed with RS256.
 
     Args:
-        vehicle_id: The vehicle's UUID (becomes 'sub' claim)
+        aircraft_id: The aircraft's UUID (becomes 'sub' claim)
 
     Returns:
         str: Signed JWT token
@@ -79,7 +79,7 @@ def create_access_token(vehicle_id: str) -> str:
     expiration = now + timedelta(minutes=settings.jwt_expiration_minutes)
 
     payload = {
-        "sub": vehicle_id,  # Subject: vehicle ID
+        "sub": aircraft_id,  # Subject: aircraft ID
         "aud": settings.jwt_audience,  # Audience: skylink
         "iat": int(now.timestamp()),  # Issued at
         "exp": int(expiration.timestamp()),  # Expiration
@@ -107,7 +107,7 @@ async def verify_jwt(
 
     Returns:
         dict: Validated JWT claims with:
-            - sub: Subject (vehicle_id as UUID string)
+            - sub: Subject (aircraft_id as UUID string)
             - aud: Audience (should be "skylink")
             - iat: Issued at timestamp
             - exp: Expiration timestamp

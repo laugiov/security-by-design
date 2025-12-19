@@ -85,14 +85,14 @@ components:
     # Common Token Request
     TokenRequest:
       type: object
-      required: [vehicle_id]
+      required: [aircraft_id]
       additionalProperties: false
       description: Standard authentication token request.
       properties:
-        vehicle_id:
+        aircraft_id:
           type: string
           format: uuid
-          description: Unique identifier of the vehicle/client
+          description: Unique identifier of the aircraft/client
           example: "550e8400-e29b-41d4-a716-446655440000"
 
     # Common Token Response
@@ -194,4 +194,4 @@ components:
       bearerFormat: JWT
       description: |
         JWT token with RS256 signature.
-        Standard claims: sub (vehicle_id), aud (service name), iat, exp (max 15 min)
+        Standard claims: sub (aircraft_id), aud (service name), iat, exp (max 15 min)

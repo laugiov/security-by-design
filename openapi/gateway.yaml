@@ -4,7 +4,7 @@ info:
   title: SkyLink API
   version: 0.6.2
   description: |
-    SkyLink Connected Car Platform - MVP
+    SkyLink Connected Aircraft Platform - MVP
 
     Security by Design implementation with JWT authentication,
     rate limiting, and strict input validation.
@@ -23,7 +23,7 @@ tags:
   - name: auth
     description: Authentication endpoints
   - name: telemetry
-    description: Vehicle telemetry data ingestion
+    description: Aircraft telemetry data ingestion
   - name: weather
     description: Weather information retrieval
   - name: contacts
@@ -58,7 +58,7 @@ paths:
       tags: [auth]
       summary: Obtain JWT token
       description: |
-        Authenticate a vehicle and receive a JWT access token.
+        Authenticate a aircraft and receive a JWT access token.
         Token is valid for 15 minutes maximum (Security by Design).
       operationId: obtainToken
       requestBody:
@@ -67,13 +67,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [vehicle_id]
+              required: [aircraft_id]
               additionalProperties: false
               properties:
-                vehicle_id:
+                aircraft_id:
                   type: string
                   format: uuid
-                  description: Unique identifier of the vehicle
+                  description: Unique identifier of the aircraft
                   example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
@@ -106,8 +106,8 @@ paths:
       tags: [telemetry]
       summary: Ingest telemetry event
       description: |
-        Store vehicle telemetry data with idempotency guarantee.
-        Idempotency key: (vehicle_id, event_id)
+        Store aircraft telemetry data with idempotency guarantee.
+        Idempotency key: (aircraft_id, event_id)
       operationId: ingestTelemetry
       security:
         - bearerAuth: []
@@ -290,7 +290,7 @@ paths:
       summary: OAuth callback (exchange code for tokens)
       description: |
         Exchanges `code` for Google tokens (access + refresh) and associates them with the application account.
-        Redirige côté front si `redirect_uri` a été fournie à l’initiation.
+        Redirects to frontend if `redirect_uri` was provided at initiation.
       operationId: googleOAuthCallback
       security: []
       parameters:
@@ -299,18 +299,18 @@ paths:
           required: true
           schema:
             type: string
-          description: Code d’autorisation retourné par Google.
+          description: Authorization code returned by Google.
         - name: state
           in: query
           required: true
           schema:
             type: string
-          description: Valeur `state` fournie lors de l’initiation (anti-CSRF).
+          description: State value provided during initiation (anti-CSRF).
       responses:
         '302':
           description: Redirect to frontend `redirect_uri` with success status
         '200':
-          description: Tokens stored (flow en contexte API pur, sans redirection)
+          description: Tokens stored (pure API context flow, without redirection)
           content:
             application/json:
               schema:
@@ -355,7 +355,7 @@ paths:
       tags: [contacts]
       summary: List user's Google contacts (proxied)
       description: |
-        Proxifie `people.connections.list` pour l’utilisateur lié.
+        Proxies `people.connections.list` for the linked user.
         Implements pagination, sorting, and **incremental sync** via `sync_token`.
         **Note**: `person_fields` is *required* by Google, otherwise 400 error from provider.
       operationId: listContacts
@@ -386,7 +386,7 @@ paths:
             type: string
         - name: sort_order
           in: query
-          description: Ordre de tri quand `sync_token` n’est pas utilisé.
+          description: Sort order when `sync_token` is not used.
           schema:
             type: string
             enum:
@@ -445,7 +445,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized (JWT manquant/expiré) ou compte Google non lié
+          description: Unauthorized (JWT missing/expired) or Google account not linked
           content:
             application/json:
               schema:
@@ -473,12 +473,12 @@ components:
       bearerFormat: JWT
       description: |
         JWT token with RS256 signature.
-        Claims: sub (vehicle_id), aud=skylink, iat, exp (max 15 min)
+        Claims: sub (aircraft_id), aud=skylink, iat, exp (max 15 min)
 
   schemas:
     TelemetryEvent:
       type: object
-      required: [event_id, vehicle_id, ts, metrics]
+      required: [event_id, aircraft_id, ts, metrics]
       additionalProperties: false
       properties:
         event_id:
@@ -486,10 +486,10 @@ components:
           format: uuid
           description: Unique event identifier (UUIDv7 recommended)
           example: "01936d9f-8f5a-7a3e-9c1d-2b3f4c5d6e7f"
-        vehicle_id:
+        aircraft_id:
           type: string
           format: uuid
-          description: Vehicle identifier
+          description: Aircraft identifier
           example: "550e8400-e29b-41d4-a716-446655440000"
         ts:
           type: string
@@ -499,29 +499,29 @@ components:
         metrics:
           type: object
           additionalProperties: false
-          description: Complete set of real-time vehicle telemetry metrics
+          description: Complete set of real-time aircraft telemetry metrics
           properties:
             speed:
               type: number
               format: double
-              description: Vehicle speed in km/h
+              description: Aircraft speed in km/h
               example: 82.3
-            fuel_level:
+            altitude:
               type: number
               format: double
               minimum: 0
               maximum: 100
-              description: Fuel level percentage
+              description: Altitude in feet
               example: 67.2
             engine_temp:
               type: number
               format: double
               description: Engine temperature in °C
               example: 90.5
-            tire_pressure:
+            engine_status:
               type: object
               additionalProperties: false
-              description: Tire pressure per wheel in kPa
+              description: Engine status per engine
               properties:
                 front_left:
                   type: number
@@ -593,10 +593,10 @@ components:
               enum: [armed, deployed, fault]
               description: Airbag system status
               example: armed
-            transmission:
+            flight_controls:
               type: object
               additionalProperties: false
-              description: Transmission data
+              description: FlightControls data
               properties:
                 gear:
                   type: integer
@@ -608,7 +608,7 @@ components:
             lights_status:
               type: object
               additionalProperties: false
-              description: Vehicle lights state
+              description: Aircraft lights state
               properties:
                 headlights:
                   type: boolean
@@ -639,10 +639,10 @@ components:
                 recirculation_mode:
                   type: boolean
                   example: false
-            seatbelt_status:
+            cabin_pressure:
               type: object
               additionalProperties: false
-              description: Seatbelt fastening status per seat
+              description: Cabin pressure status
               properties:
                 driver:
                   type: boolean
@@ -922,16 +922,16 @@ components:
         next_page_token:
           type: string
           nullable: true
-          description: À renvoyer dans `page_token` pour la page suivante (absent si dernière page).
+          description: To be returned in `page_token` for the next page (absent if last page).
           example: "CiQA3P7j…"
         next_sync_token:
           type: string
           nullable: true
-          description: À renvoyer dans `sync_token` pour la sync incrémentale (présent uniquement sur la dernière page si `request_sync_token=true`).
+          description: To be returned in `sync_token` for incremental sync (present only on the last page if `request_sync_token=true`).
           example: "CPD2tL6i…"
         total_items:
           type: integer
-          description: Nombre total d’éléments (si fourni par le provider).
+          description: Total number of items (if provided by the provider).
           example: 350
 
     GooglePerson:
@@ -940,11 +940,11 @@ components:
       properties:
         resourceName:
           type: string
-          description: Identifiant `people/{id}` Google.
+          description: Google `people/{id}` identifier.
           example: "people/c1234567890"
         etag:
           type: string
-          description: ETag de la ressource.
+          description: Resource ETag.
         names:
           type: array
           items:
@@ -1027,7 +1027,7 @@ components:
           properties:
             deleted:
               type: boolean
-              description: True if contact has been deleted (incremental sync case).
+              description: True if the contact has been deleted (incremental sync case).
 
     Error:
       type: object

@@ -6,12 +6,12 @@ info:
     Internal microservice integrating with Google People API for contacts.
 
     **OAuth Flow**: Pre-configured OAuth via admin CLI tool (simplified).
-    An administrator uses the CLI tool (`scripts/configure_vehicle_oauth.py`) to:
+    An administrator uses the CLI tool (`scripts/configure_aircraft_oauth.py`) to:
     1. Generate Google OAuth authorization URL
     2. Obtain authorization code from Google
     3. Call `/oauth/callback` to save encrypted tokens
 
-    **Authentication**: Requires X-Vehicle-Id header (injected by gateway from JWT).
+    **Authentication**: Requires X-Aircraft-Id header (injected by gateway from JWT).
 
     **Demo Mode**: If `DEMO_MODE=true`, returns static fixtures without OAuth.
 
@@ -55,7 +55,7 @@ paths:
       tags: [contacts]
       summary: List user's Google contacts
       description: |
-        Fetch Google contacts for the authenticated vehicle.
+        Fetch Google contacts for the authenticated aircraft.
 
         **Demo Mode**: Returns static fixtures if `DEMO_MODE=true`.
 
@@ -64,15 +64,15 @@ paths:
         - Auto-refreshes access tokens if expired
         - Requires prior OAuth configuration via `/oauth/callback`
 
-        **Required Header**: `X-Vehicle-Id` (injected by gateway from JWT)
+        **Required Header**: `X-Aircraft-Id` (injected by gateway from JWT)
       operationId: contacts.listContacts
       security:
-        - vehicleId: []
+        - aircraftId: []
       parameters:
-        - name: X-Vehicle-Id
+        - name: X-Aircraft-Id
           in: header
           required: true
-          description: Vehicle UUID (extracted from JWT by gateway)
+          description: Aircraft UUID (extracted from JWT by gateway)
           schema:
             type: string
             format: uuid
@@ -112,14 +112,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContactsListResponse'
         '404':
-          description: Vehicle not configured - OAuth tokens not found
+          description: Aircraft not configured - OAuth tokens not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 detail:
-                  code: "VEHICLE_NOT_CONFIGURED"
+                  code: "AIRCRAFT_NOT_CONFIGURED"
                   message: "Please configure your Google account in the mobile app"
                   action: "configure_google_account"
         '401':
@@ -201,7 +201,7 @@ paths:
         1. Mobile app redirects user to Google OAuth consent screen
         2. User authorizes access
         3. Google redirects back with authorization code
-        4. Mobile app calls this endpoint with code + vehicle_id
+        4. Mobile app calls this endpoint with code + aircraft_id
         5. Service exchanges code for access/refresh tokens
         6. Tokens are saved in database (refresh_token encrypted with AES-256-GCM)
 
@@ -218,10 +218,10 @@ paths:
           schema:
             type: string
           example: "4/0AfJohXm..."
-        - name: vehicle_id
+        - name: aircraft_id
           in: query
           required: true
-          description: Vehicle UUID to associate tokens with
+          description: Aircraft UUID to associate tokens with
           schema:
             type: string
             format: uuid
@@ -233,7 +233,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [success, message, vehicle_id]
+                required: [success, message, aircraft_id]
                 properties:
                   success:
                     type: boolean
@@ -241,7 +241,7 @@ paths:
                   message:
                     type: string
                     example: "Google account configured successfully"
-                  vehicle_id:
+                  aircraft_id:
                     type: string
                     format: uuid
                     example: "550e8400-e29b-41d4-a716-446655440000"
@@ -275,13 +275,13 @@ paths:
 
 components:
   securitySchemes:
-    vehicleId:
+    aircraftId:
       type: apiKey
       in: header
-      name: X-Vehicle-Id
+      name: X-Aircraft-Id
       description: |
-        Vehicle UUID extracted from JWT by gateway.
-        Gateway verifies JWT and passes vehicle_id via this header.
+        Aircraft UUID extracted from JWT by gateway.
+        Gateway verifies JWT and passes aircraft_id via this header.
 
   schemas:
     ContactsListResponse:

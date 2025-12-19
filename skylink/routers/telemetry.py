@@ -62,13 +62,13 @@ async def ingest_telemetry(
     claims: dict = Depends(verify_jwt),
     authorization: str = Header(..., description="Bearer JWT token"),
 ):
-    """Ingest vehicle telemetry data.
+    """Ingest aircraft telemetry data.
 
     Gateway endpoint that proxies to the Telemetry microservice.
     Requires JWT authentication.
 
     Args:
-        event: Telemetry event data from vehicle
+        event: Telemetry event data from aircraft
         response: FastAPI response object to set status code
         claims: JWT claims from verify_jwt dependency
         authorization: Original Authorization header to forward
@@ -105,17 +105,17 @@ async def ingest_telemetry(
         ) from e
 
 
-@router.get("/events/{vehicle_id}")
-async def get_vehicle_telemetry(
-    vehicle_id: str, limit: Optional[int] = 100, offset: Optional[int] = 0
+@router.get("/events/{aircraft_id}")
+async def get_aircraft_telemetry(
+    aircraft_id: str, limit: Optional[int] = 100, offset: Optional[int] = 0
 ):
     """
-    Get telemetry events for a specific vehicle.
+    Get telemetry events for a specific aircraft.
 
     Gateway endpoint that proxies to the Telemetry microservice.
 
     Args:
-        vehicle_id: Vehicle identifier
+        aircraft_id: Aircraft identifier
         limit: Maximum number of events to return
         offset: Offset for pagination
     """

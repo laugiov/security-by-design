@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from skylink.auth import verify_jwt
 from skylink.models.weather.weather_data import WeatherData
-from skylink.rate_limit import RATE_LIMIT_PER_VEHICLE, limiter
+from skylink.rate_limit import RATE_LIMIT_PER_AIRCRAFT, limiter
 
 router = APIRouter(
     prefix="/weather",
@@ -20,7 +20,7 @@ PROXY_TIMEOUT = 2.0  # 2 seconds timeout
 
 
 @router.get("/current", response_model=WeatherData)
-@limiter.limit(RATE_LIMIT_PER_VEHICLE)
+@limiter.limit(RATE_LIMIT_PER_AIRCRAFT)
 async def get_current_weather(
     request: Request,
     lat: float = Query(..., ge=-90, le=90, description="Latitude coordinate"),

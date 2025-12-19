@@ -6,11 +6,11 @@
 
 ### 1.1 Context and Objectives
 
-SkyLink is a connected vehicle services platform implemented following **Security by Design** and **Contract-First** principles. The microservices architecture enables horizontal scalability and business domain isolation.
+SkyLink is a connected aircraft services platform implemented following **Security by Design** and **Contract-First** principles. The microservices architecture enables horizontal scalability and business domain isolation.
 
 **Key objectives**:
-- Collect and process real-time vehicle telemetry data
-- Provide contextualized weather services for driving assistance
+- Collect and process real-time aircraft telemetry data
+- Provide contextualized weather services for flight assistance
 - Manage emergency contacts with Google OAuth integration
 - Ensure data security (PII minimization, encryption, auditability)
 
@@ -63,7 +63,7 @@ Single entry point of the platform. Centralizes authentication, validation, and 
 | Component | Responsibility | Implementation |
 |-----------|----------------|----------------|
 | **Auth JWT RS256** | Token issuance and verification | PyJWT, 2048-bit RSA keys |
-| **Rate Limiting** | Abuse protection | slowapi, 60 req/min per vehicle_id |
+| **Rate Limiting** | Abuse protection | slowapi, 60 req/min per aircraft_id |
 | **Security Headers** | OWASP protection | X-Content-Type-Options, X-Frame-Options, CSP |
 | **Payload Limit** | DoS protection | 64 KB max per request |
 | **JSON Logging** | Observability | Structured logs, W3C trace_id |
@@ -72,19 +72,19 @@ Single entry point of the platform. Centralizes authentication, validation, and 
 
 ### 2.2 Telemetry Service (Port 8001)
 
-Collection and storage of vehicle telemetry data with idempotency guarantee.
+Collection and storage of aircraft telemetry data with idempotency guarantee.
 
 | Feature | Description | HTTP Code |
 |---------|-------------|-----------|
 | Event creation | New event_id | 201 Created |
-| Exact duplicate | Same (vehicle_id, event_id) | 200 OK |
+| Exact duplicate | Same (aircraft_id, event_id) | 200 OK |
 | Conflict | event_id reused, different data | 409 Conflict |
 
 **PII Minimization**: GPS coordinates rounded to 4 decimals (~11m accuracy).
 
 ### 2.3 Weather Service (Port 8002)
 
-Weather service for driving assistance. Demo mode with Paris fixtures.
+Weather service for flight assistance. Demo mode with Paris fixtures.
 
 **Endpoints**:
 - `GET /weather/current`: Current conditions
@@ -109,14 +109,14 @@ Level 1: Transport (mTLS)
 +---------------------------+
 | X.509 client certificate  |
 | Signed by SkyLink CA      |
-| CN = vehicle_id           |
+| CN = aircraft_id          |
 +---------------------------+
             |
             v
 Level 2: Application (JWT RS256)
 +---------------------------+
 | RS256 signed JWT token    |
-| sub = vehicle_id          |
+| sub = aircraft_id         |
 | exp = 15 minutes max      |
 | aud = "skylink"           |
 +---------------------------+
@@ -143,7 +143,7 @@ Level 3: Cross-Validation
 
 ```
 slowapi Configuration:
-- Per vehicle_id: 60 requests/minute
+- Per aircraft_id: 60 requests/minute
 - Global: 10 requests/second
 - Response: 429 Too Many Requests
 - Prometheus Counter: rate_limit_exceeded_total
@@ -316,17 +316,17 @@ Endpoint: `GET /metrics`
 
 ## 7. RRA Compliance (Rapid Risk Assessment)
 
-This section details the project's compliance with recommendations from the **SkyLink-RRA.pdf** document (Fast Car Connect Risk Assessment).
+This section details the project's compliance with recommendations from the **SkyLink-RRA.pdf** document (SkyLink Risk Assessment).
 
 ### 7.1 RRA Recommendations and Implementation
 
 | Impact | RRA Recommendation | Status | Implementation |
 |--------|-------------------|--------|----------------|
-| **MAXIMUM** | Use mTLS for vehicle-service identification | ✅ Done | Module `skylink/mtls.py`, PKI scripts in `scripts/`, cross-validation CN <-> JWT |
+| **MAXIMUM** | Use mTLS for aircraft-service identification | ✅ Done | Module `skylink/mtls.py`, PKI scripts in `scripts/`, cross-validation CN <-> JWT |
 | **MAXIMUM** | Use OAuth with least privileges | ✅ Done | Contacts Service with Google OAuth 2.0, `read-only` scope for contacts |
 | **MAXIMUM** | Manage secrets with KMS/Vault | ✅ MVP | Protected CI variables + local `.env` (see note 7.6) |
 | **HIGH** | Data minimization (Geohash location) | ✅ Done | GPS rounded to 4 decimals (~11m), no contact persistence by default |
-| **HIGH** | API security (JWT + rate limiting) | ✅ Done | JWT RS256 (15min exp), slowapi 60 req/min per vehicle_id |
+| **HIGH** | API security (JWT + rate limiting) | ✅ Done | JWT RS256 (15min exp), slowapi 60 req/min per aircraft_id |
 | **HIGH** | PII-free logs, tracing, metrics | ✅ Done | JSON logging with trace_id, `/metrics` Prometheus, PII-free logs |
 | **HIGH** | CI/CD supply chain (SBOM, SCA, SAST/DAST) | ✅ Done | GitLab pipeline: bandit, trivy, cyclonedx-bom, ZAP DAST |
 
@@ -335,9 +335,9 @@ This section details the project's compliance with recommendations from the **Sk
 | Scenario (RRA) | Impact | Implemented Control | Evidence |
 |----------------|--------|---------------------|----------|
 | **Data leaks** (OAuth tokens, GPS, verbose logs) | MAXIMUM | PII-free logs, strict schemas, protected CI variables | Validation tests, .gitignore |
-| **Driving system alteration** | MAXIMUM | Mandatory mTLS, RS256 signed JWT, strict validation | Auth tests, mTLS tests |
-| **Vehicle spoofing** (missing mTLS) | HIGH | mTLS with cross-validation CN == JWT sub | Tests `test_mtls_auth_integration.py` |
-| **Replay attacks** (missing nonce) | MEDIUM | Idempotency `(vehicle_id, event_id)` unique | Tests 201/200/409 |
+| **Flight system alteration** | MAXIMUM | Mandatory mTLS, RS256 signed JWT, strict validation | Auth tests, mTLS tests |
+| **Aircraft spoofing** (missing mTLS) | HIGH | mTLS with cross-validation CN == JWT sub | Tests `test_mtls_auth_integration.py` |
+| **Replay attacks** (missing nonce) | MEDIUM | Idempotency `(aircraft_id, event_id)` unique | Tests 201/200/409 |
 | **Supply-chain** (compromised image/dependency) | MAXIMUM | CycloneDX SBOM, Trivy scan, Bandit SAST | CI pipeline artifacts |
 | **DDoS/API flood** | HIGH | slowapi rate-limit, 429 response | Rate-limit tests, `rate_limit_exceeded_total` metric |
 | **Vendor quota/outage** | MEDIUM | Demo mode fixtures (Weather), targeted circuit-breaker | Weather Service demo mode |
@@ -347,8 +347,8 @@ This section details the project's compliance with recommendations from the **Sk
 
 | Data (RRA) | Classification | Implemented Control |
 |------------|----------------|---------------------|
-| Vehicle UUID | Internal | Strict UUID validation (Pydantic) |
-| Telemetry (speed, fuel, etc.) | Confidential | `additionalProperties: false` schemas, data-free logs |
+| Aircraft UUID | Internal | Strict UUID validation (Pydantic) |
+| Telemetry (speed, altitude, etc.) | Confidential | `additionalProperties: false` schemas, data-free logs |
 | GPS Position | Confidential (PII) | **Rounded to 4 decimals** (~11m accuracy) |
 | Google Contacts | Confidential (PII) | Read-only OAuth, no persistence by default |
 | Google auth tokens | Restricted | Protected CI variables, secured PostgreSQL storage |
@@ -360,18 +360,18 @@ This section details the project's compliance with recommendations from the **Sk
 | Risk (RRA) | Control | File/Test | Status |
 |------------|---------|-----------|--------|
 | API Flood / DDoS | slowapi rate-limit (429) | `tests/test_rate_limit.py` | ✅ |
-| Replay / duplicates | Idempotency (vehicle_id, event_id) | `tests/test_telemetry.py` (201/200/409) | ✅ |
+| Replay / duplicates | Idempotency (aircraft_id, event_id) | `tests/test_telemetry.py` (201/200/409) | ✅ |
 | PII exposure | Strict schemas + PII-free logs | `tests/test_middlewares.py` | ✅ |
 | Vulnerable dependencies | SCA/SAST + SBOM | `.gitlab-ci.yml` (trivy, bandit, sbom) | ✅ |
 | Plaintext secrets | Protected/masked CI vars | GitLab Settings CI/CD | ✅ |
-| Vehicle impersonation | mTLS + cross-validation CN<->JWT | `tests/test_mtls*.py` | ✅ |
+| Aircraft impersonation | mTLS + cross-validation CN<->JWT | `tests/test_mtls*.py` | ✅ |
 | Injection / XSS | Strict schemas + Pydantic | `tests/test_error_handlers.py` | ✅ |
 
 ### 7.5 Targeted Elements (Non-MVP)
 
 | RRA Element | MVP Status | Production Target |
 |-------------|------------|-------------------|
-| HSM for vehicle keys | Not implemented | Hardware HSM + automated PKI |
+| HSM for aircraft keys | Not implemented | Hardware HSM + automated PKI |
 | Centralized SIEM | stdout logs | ELK Stack / Splunk |
 | SLSA attestation >= L3 | SBOM generated | cosign + provenance attestation |
 | Vendor circuit-breaker | Demo mode | Resilience4j / Hystrix pattern |

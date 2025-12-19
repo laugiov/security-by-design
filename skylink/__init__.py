@@ -1,3 +1,3 @@
-"""SkyLink - Connected Car Platform."""
+"""SkyLink - Connected Aircraft Platform."""
 
 __version__ = "0.1.0"

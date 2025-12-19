@@ -1,7 +1,7 @@
 """mTLS (Mutual TLS) module for SkyLink Gateway.
 
-This module provides mutual TLS authentication between vehicles and the Gateway.
-Vehicles must present a valid certificate signed by our CA to establish a connection.
+This module provides mutual TLS authentication between aircrafts and the Gateway.
+Aircrafts must present a valid certificate signed by our CA to establish a connection.
 
 Security by Design:
 - Certificates are verified against a trusted CA
@@ -154,7 +154,7 @@ def create_ssl_context(config: MTLSConfig) -> Optional[ssl.SSLContext]:
 def extract_client_cn(peer_cert: Optional[dict]) -> Optional[str]:
     """Extract Common Name (CN) from client certificate.
 
-    The CN should contain the vehicle_id for correlation with JWT tokens.
+    The CN should contain the aircraft_id for correlation with JWT tokens.
     This enables cross-validation between mTLS identity and JWT subject.
 
     Args:
@@ -165,15 +165,15 @@ def extract_client_cn(peer_cert: Optional[dict]) -> Optional[str]:
 
     Example:
         >>> cert = ssl_socket.getpeercert()
-        >>> vehicle_id = extract_client_cn(cert)
-        >>> # vehicle_id = "vehicle-001" or "550e8400-e29b-..."
+        >>> aircraft_id = extract_client_cn(cert)
+        >>> # aircraft_id = "aircraft-001" or "550e8400-e29b-..."
     """
     if not peer_cert:
         return None
 
     # Certificate subject is a tuple of RDNs (Relative Distinguished Names)
     # Each RDN is a tuple of (attribute_type, value)
-    # Format: (('commonName', 'vehicle-001'),)
+    # Format: (('commonName', 'aircraft-001'),)
     subject = peer_cert.get("subject", ())
 
     for rdn in subject:
@@ -194,7 +194,7 @@ def extract_client_cert_info(peer_cert: Optional[dict]) -> dict:
 
     Returns:
         Dictionary with certificate information:
-            - cn: Common Name (vehicle_id)
+            - cn: Common Name (aircraft_id)
             - issuer: Certificate issuer CN
             - not_before: Validity start date
             - not_after: Validity end date

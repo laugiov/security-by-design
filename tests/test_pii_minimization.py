@@ -138,7 +138,7 @@ class TestStrictSchemaValidation:
         with pytest.raises(ValidationError) as exc_info:
             TelemetryEvent(
                 event_id=uuid4(),
-                vehicle_id=uuid4(),
+                aircraft_id=uuid4(),
                 ts=datetime.now(timezone.utc),
                 metrics=TelemetryEventMetrics(),
                 hacker_field="attempt",
@@ -267,7 +267,7 @@ class TestGPSPrivacyPrecision:
 
     def test_precision_reduces_accuracy(self):
         """Demonstrate that 4 decimals reduces tracking precision."""
-        # Full precision coordinate (could pinpoint a specific car spot)
+        # Full precision coordinate (could pinpoint a specific location)
         full_lat = 48.85661234
         full_lon = 2.35221234
 

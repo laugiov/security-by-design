@@ -1,4 +1,4 @@
-"""Configuration du service Telemetry."""
+"""Telemetry service configuration."""
 
 import os
 from typing import Optional
@@ -24,29 +24,29 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8001
 
-    # JWT RS256 - vérification uniquement
+    # JWT RS256 - verification only
     public_key_pem: Optional[str] = None
     _public_key_cache: Optional[str] = None
 
     jwt_algorithm: str = "RS256"
-    jwt_audience: str = "skylink"  # aligné avec la Gateway
+    jwt_audience: str = "skylink"  # aligned with Gateway
 
     def get_public_key(self) -> str:
-        """Retourne la clé publique PEM, avec cache."""
+        """Returns the public PEM key, with cache."""
         if self._public_key_cache:
             return self._public_key_cache
 
         key = os.getenv("PUBLIC_KEY_PEM") or self.public_key_pem
         if not key:
             raise RuntimeError(
-                "PUBLIC_KEY_PEM non trouvée. Configurez-la dans .env ou comme variable d'environnement."
+                "PUBLIC_KEY_PEM not found. Configure it in .env or as an environment variable."
             )
         self._public_key_cache = key
         return key
 
-    # DB (future impl PostgreSQL)
+    # DB (future PostgreSQL implementation)
     database_url: str = "postgresql+psycopg://user:password@db/telemetry"
 
 
-# Instance globale de configuration
+# Global configuration instance
 settings = Settings()

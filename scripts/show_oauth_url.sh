@@ -1,35 +1,35 @@
 #!/bin/bash
-# Affiche l'URL d'autorisation Google OAuth
+# Display Google OAuth authorization URL
 
 cd /var/www/html/SkyLink
 source .env 2>/dev/null || true
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════════════════════════╗"
-echo "║                    AUTORISATION GOOGLE OAUTH                              ║"
+echo "║                    GOOGLE OAUTH AUTHORIZATION                             ║"
 echo "╚═══════════════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "📋 Étape 1 : Copie cette URL et ouvre-la dans ton navigateur :"
+echo "📋 Step 1: Copy this URL and open it in your browser:"
 echo ""
 echo "https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=http%3A%2F%2Flocalhost%3A8003%2Foauth%2Fcallback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcontacts.readonly&access_type=offline&prompt=consent"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📝 Étape 2 : Après autorisation, Google te redirige vers une URL comme :"
+echo "📝 Step 2: After authorization, Google redirects you to a URL like:"
 echo ""
 echo "   http://localhost:8003/oauth/callback?code=4/0AfJohXm...&scope=..."
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🔑 Étape 3 : Copie le CODE de l'URL (la partie après code=...jusqu'au &)"
+echo "🔑 Step 3: Copy the CODE from the URL (the part after code=... up to &)"
 echo ""
-echo "   Exemple : 4/0AfJohXm_abc123xyz"
+echo "   Example: 4/0AfJohXm_abc123xyz"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "✅ Étape 4 : Exécute cette commande avec TON code :"
+echo "✅ Step 4: Execute this command with YOUR code:"
 echo ""
-echo "   ./scripts/quick_oauth_setup.sh \"TON_CODE_ICI\""
+echo "   ./scripts/quick_oauth_setup.sh \"YOUR_CODE_HERE\""
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

@@ -1,6 +1,6 @@
 """SkyLink - Main application module.
 
-This is the API Gateway for the SkyLink connected car platform.
+This is the API Gateway for the SkyLink connected aircraft platform.
 It provides:
 - JWT RS256 authentication
 - mTLS mutual authentication (optional)
@@ -29,7 +29,7 @@ from skylink.routers import auth, contacts, telemetry, weather
 app = FastAPI(
     title="SkyLink API Gateway",
     version="0.1.0",
-    description="Connected Car Platform - API Gateway for Microservices",
+    description="Connected Aircraft Platform - API Gateway for Microservices",
 )
 
 # Prometheus metrics instrumentation

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Script de test pour vérifier la configuration OAuth Google.
+"""Test script to verify Google OAuth configuration.
 
-Ce script vérifie que :
-1. Les variables d'environnement sont définies
-2. Le client_id est valide
-3. L'URL d'autorisation peut être générée
-4. Le service contacts est accessible
+This script verifies that:
+1. Environment variables are defined
+2. The client_id is valid
+3. The authorization URL can be generated
+4. The contacts service is accessible
 
 Usage:
     python scripts/test_oauth_url.py
@@ -15,19 +15,19 @@ import os
 import sys
 from urllib.parse import urlencode
 
-# Vérifier si httpx est disponible
+# Check if httpx is available
 try:
     import httpx
 except ImportError:
-    print("⚠️  httpx n'est pas installé")
-    print("   Installé avec: poetry add httpx")
+    print("⚠️  httpx is not installed")
+    print("   Install with: poetry add httpx")
     httpx = None
 
 
 def test_env_vars():
-    """Teste que les variables d'environnement sont définies."""
+    """Test that environment variables are defined."""
     print("\n" + "=" * 60)
-    print("1. Vérification des variables d'environnement")
+    print("1. Environment Variables Verification")
     print("=" * 60)
 
     required_vars = {
@@ -45,10 +45,10 @@ def test_env_vars():
 
     all_ok = True
 
-    # Variables requises
+    # Required variables
     for var_name, var_value in required_vars.items():
         if var_value:
-            # Masquer partiellement les valeurs sensibles
+            # Partially mask sensitive values
             if var_name == "GOOGLE_CLIENT_SECRET" or var_name == "ENCRYPTION_KEY":
                 display_value = (
                     var_value[:10] + "..." + var_value[-10:] if len(var_value) > 20 else "***"
@@ -57,80 +57,80 @@ def test_env_vars():
                 display_value = var_value[:30] + "..." if len(var_value) > 30 else var_value
             print(f"✅ {var_name:25} = {display_value}")
         else:
-            print(f"❌ {var_name:25} = (non définie)")
+            print(f"❌ {var_name:25} = (not defined)")
             all_ok = False
 
-    # Variables optionnelles
-    print("\nVariables optionnelles:")
+    # Optional variables
+    print("\nOptional variables:")
     for var_name, var_value in optional_vars.items():
         print(f"ℹ️  {var_name:25} = {var_value}")
 
     if not all_ok:
-        print("\n❌ Certaines variables requises sont manquantes!")
-        print("\nDéfinissez-les dans votre .env:")
+        print("\n❌ Some required variables are missing!")
+        print("\nDefine them in your .env:")
         print('GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"')
         print('GOOGLE_CLIENT_SECRET="GOCSPX-your-secret"')
         print('ENCRYPTION_KEY="$(openssl rand -hex 32)"')
         return False
 
-    print("\n✅ Toutes les variables requises sont définies!")
+    print("\n✅ All required variables are defined!")
     return True
 
 
 def test_client_id_format():
-    """Vérifie le format du client ID."""
+    """Verify Client ID format."""
     print("\n" + "=" * 60)
-    print("2. Vérification du format Client ID")
+    print("2. Client ID Format Verification")
     print("=" * 60)
 
     client_id = os.getenv("GOOGLE_CLIENT_ID")
 
     if not client_id:
-        print("❌ GOOGLE_CLIENT_ID non définie")
+        print("❌ GOOGLE_CLIENT_ID not defined")
         return False
 
-    # Vérifier le format Google OAuth client ID
+    # Verify Google OAuth client ID format
     if ".apps.googleusercontent.com" in client_id:
-        print(f"✅ Format Client ID valide: {client_id[:30]}...")
+        print(f"✅ Valid Client ID format: {client_id[:30]}...")
         return True
     else:
-        print(f"⚠️  Format Client ID inhabituel: {client_id}")
-        print("   Format attendu: xxxxx-xxxxx.apps.googleusercontent.com")
+        print(f"⚠️  Unusual Client ID format: {client_id}")
+        print("   Expected format: xxxxx-xxxxx.apps.googleusercontent.com")
         return False
 
 
 def test_encryption_key_format():
-    """Vérifie le format de la clé de chiffrement."""
+    """Verify encryption key format."""
     print("\n" + "=" * 60)
-    print("3. Vérification de la clé de chiffrement")
+    print("3. Encryption Key Verification")
     print("=" * 60)
 
     encryption_key = os.getenv("ENCRYPTION_KEY")
 
     if not encryption_key:
-        print("❌ ENCRYPTION_KEY non définie")
+        print("❌ ENCRYPTION_KEY not defined")
         return False
 
-    # Vérifier que c'est un hex de 64 caractères (32 bytes)
+    # Verify it's a 64-character hex string (32 bytes)
     if len(encryption_key) == 64:
         try:
             bytes.fromhex(encryption_key)
-            print("✅ Clé de chiffrement valide (32 bytes hex)")
-            print(f"   Début: {encryption_key[:10]}...")
+            print("✅ Valid encryption key (32 bytes hex)")
+            print(f"   Start: {encryption_key[:10]}...")
             return True
         except ValueError:
-            print("❌ Clé de chiffrement invalide (pas du hex)")
+            print("❌ Invalid encryption key (not hex)")
             return False
     else:
-        print(f"⚠️  Longueur de clé incorrecte: {len(encryption_key)} caractères (attendu: 64)")
-        print("   Générez une nouvelle clé avec: openssl rand -hex 32")
+        print(f"⚠️  Incorrect key length: {len(encryption_key)} characters (expected: 64)")
+        print("   Generate a new key with: openssl rand -hex 32")
         return False
 
 
 def generate_oauth_url():
-    """Génère l'URL d'autorisation OAuth."""
+    """Generate OAuth authorization URL."""
     print("\n" + "=" * 60)
-    print("4. Génération de l'URL OAuth")
+    print("4. OAuth URL Generation")
     print("=" * 60)
 
     client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -147,12 +147,12 @@ def generate_oauth_url():
 
     oauth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
-    print("✅ URL d'autorisation générée avec succès!\n")
-    print("URL complète:")
+    print("✅ Authorization URL generated successfully!\n")
+    print("Full URL:")
     print(f"{oauth_url}\n")
 
-    # Afficher les paramètres
-    print("Paramètres:")
+    # Display parameters
+    print("Parameters:")
     for key, value in params.items():
         if key == "client_id":
             display_value = value[:30] + "..." if len(value) > 30 else value
@@ -164,75 +164,75 @@ def generate_oauth_url():
 
 
 def test_service_connection():
-    """Teste la connexion au service contacts."""
+    """Test connection to contacts service."""
     print("\n" + "=" * 60)
-    print("5. Test de connexion au service contacts")
+    print("5. Contacts Service Connection Test")
     print("=" * 60)
 
     if not httpx:
-        print("⚠️  Impossible de tester (httpx non installé)")
+        print("⚠️  Cannot test (httpx not installed)")
         return None
 
     service_url = "http://localhost:8003"
 
     try:
-        print(f"Tentative de connexion à {service_url}/health...")
+        print(f"Attempting connection to {service_url}/health...")
         response = httpx.get(f"{service_url}/health", timeout=2.0)
 
         if response.status_code == 200:
             data = response.json()
-            print("✅ Service contacts accessible!")
+            print("✅ Contacts service accessible!")
             print(f"   Status: {data.get('status', 'unknown')}")
             print(f"   Service: {data.get('service', 'unknown')}")
             return True
         else:
-            print(f"⚠️  Service répond mais status {response.status_code}")
+            print(f"⚠️  Service responds but status {response.status_code}")
             return False
 
     except httpx.ConnectError:
-        print(f"❌ Impossible de se connecter à {service_url}")
-        print("   Le service contacts n'est probablement pas démarré")
-        print("\n   Démarrez-le avec:")
+        print(f"❌ Cannot connect to {service_url}")
+        print("   The contacts service is probably not started")
+        print("\n   Start it with:")
         print("   poetry run uvicorn contacts.main:app --host 0.0.0.0 --port 8003")
         return False
 
     except Exception as e:
-        print(f"❌ Erreur: {e}")
+        print(f"❌ Error: {e}")
         return False
 
 
 def print_next_steps(oauth_url):
-    """Affiche les prochaines étapes."""
+    """Display next steps."""
     print("\n" + "=" * 60)
-    print("📋 PROCHAINES ÉTAPES")
+    print("📋 NEXT STEPS")
     print("=" * 60)
 
-    print("\n1. Démarrer le service contacts (si pas déjà fait):")
+    print("\n1. Start the contacts service (if not already done):")
     print("   poetry run uvicorn contacts.main:app --host 0.0.0.0 --port 8003")
 
-    print("\n2. Configurer un véhicule avec le CLI tool:")
-    print("   poetry add httpx rich  # Si pas déjà installé")
-    print("   python scripts/configure_vehicle_oauth.py")
+    print("\n2. Configure an aircraft with the CLI tool:")
+    print("   poetry add httpx rich  # If not already installed")
+    print("   python scripts/configure_aircraft_oauth.py")
 
-    print("\n3. Ou manuellement:")
-    print("   a) Ouvrir cette URL dans le navigateur:")
+    print("\n3. Or manually:")
+    print("   a) Open this URL in the browser:")
     print(f"      {oauth_url[:80]}...")
-    print("   b) Autoriser l'accès aux contacts")
-    print("   c) Copier le code de l'URL de redirection")
-    print("   d) Appeler /oauth/callback avec le code et vehicle_id")
+    print("   b) Authorize contacts access")
+    print("   c) Copy the code from the redirect URL")
+    print("   d) Call /oauth/callback with the code and aircraft_id")
 
-    print("\n4. Tester l'endpoint:")
-    print('   curl -H "X-Vehicle-Id: <vehicle-uuid>" \\')
+    print("\n4. Test the endpoint:")
+    print('   curl -H "X-Aircraft-Id: <aircraft-uuid>" \\')
     print('        "http://localhost:8003/v1/contacts?person_fields=names"')
 
-    print("\n📚 Documentation complète:")
+    print("\n📚 Complete documentation:")
     print("   local/contacts-oauth/DEPLOYMENT_GUIDE.md")
 
 
 def main():
-    """Point d'entrée principal."""
+    """Main entry point."""
     print("\n" + "=" * 60)
-    print("🔍 TEST DE CONFIGURATION OAUTH GOOGLE")
+    print("🔍 GOOGLE OAUTH CONFIGURATION TEST")
     print("=" * 60)
 
     # Tests
@@ -244,47 +244,47 @@ def main():
 
     if not all([results["env_vars"], results["encryption_key"]]):
         print("\n" + "=" * 60)
-        print("❌ CONFIGURATION INCOMPLÈTE")
+        print("❌ INCOMPLETE CONFIGURATION")
         print("=" * 60)
-        print("\nCorrigez les erreurs ci-dessus avant de continuer.")
+        print("\nCorrect the errors above before continuing.")
         sys.exit(1)
 
-    # Générer l'URL OAuth
+    # Generate OAuth URL
     oauth_url = generate_oauth_url()
 
-    # Tester le service
+    # Test the service
     service_ok = test_service_connection()
 
-    # Résumé
+    # Summary
     print("\n" + "=" * 60)
-    print("📊 RÉSUMÉ")
+    print("📊 SUMMARY")
     print("=" * 60)
 
-    env_status = "OK" if results["env_vars"] else "ERREUR"
-    print(f"\n✅ Variables d'environnement : {env_status}")
+    env_status = "OK" if results["env_vars"] else "ERROR"
+    print(f"\n✅ Environment variables    : {env_status}")
 
     client_icon = "✅" if results["client_id"] else "⚠️"
-    client_status = "OK" if results["client_id"] else "INHABITUEL"
-    print(f"{client_icon} Format Client ID         : {client_status}")
+    client_status = "OK" if results["client_id"] else "UNUSUAL"
+    print(f"{client_icon} Client ID format        : {client_status}")
 
-    enc_status = "OK" if results["encryption_key"] else "ERREUR"
-    print(f"✅ Clé de chiffrement       : {enc_status}")
-    print("✅ URL OAuth                : OK")
+    enc_status = "OK" if results["encryption_key"] else "ERROR"
+    print(f"✅ Encryption key           : {enc_status}")
+    print("✅ OAuth URL                : OK")
 
     if service_ok is not None:
         svc_icon = "✅" if service_ok else "❌"
         svc_status = "ACCESSIBLE" if service_ok else "INACCESSIBLE"
-        print(f"{svc_icon} Service contacts         : {svc_status}")
+        print(f"{svc_icon} Contacts service        : {svc_status}")
 
     if all(results.values()) and service_ok:
-        print("\n🎉 CONFIGURATION COMPLÈTE ET VALIDE!")
+        print("\n🎉 COMPLETE AND VALID CONFIGURATION!")
         print_next_steps(oauth_url)
     elif all(results.values()):
-        print("\n✅ Configuration OAuth valide")
-        print("⚠️  Démarrez le service contacts pour continuer")
+        print("\n✅ Valid OAuth configuration")
+        print("⚠️  Start the contacts service to continue")
         print_next_steps(oauth_url)
     else:
-        print("\n❌ Configuration incomplète")
+        print("\n❌ Incomplete configuration")
         sys.exit(1)
 
 

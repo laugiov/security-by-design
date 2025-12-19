@@ -29,7 +29,7 @@ class TestVerifyJWTWithMTLS:
     def valid_claims(self):
         """Valid JWT claims."""
         return {
-            "sub": "vehicle-test-001",
+            "sub": "aircraft-test-001",
             "aud": "skylink",
             "iat": 1700000000,
             "exp": 1700000900,
@@ -73,7 +73,7 @@ class TestVerifyJWTWithMTLS:
     @pytest.mark.asyncio
     async def test_mtls_enabled_matching_cn_passes(self, mock_request, valid_claims):
         """When mTLS enabled and CN matches JWT subject, validation passes."""
-        mock_request.state.mtls_cn = "vehicle-test-001"  # Matches valid_claims["sub"]
+        mock_request.state.mtls_cn = "aircraft-test-001"  # Matches valid_claims["sub"]
 
         with patch("skylink.auth.settings") as mock_settings:
             mock_settings.mtls_enabled = True
@@ -91,7 +91,7 @@ class TestVerifyJWTWithMTLS:
     @pytest.mark.asyncio
     async def test_mtls_enabled_mismatched_cn_fails(self, mock_request, valid_claims):
         """When mTLS enabled and CN doesn't match JWT subject, 403 is raised."""
-        mock_request.state.mtls_cn = "different-vehicle"  # Doesn't match valid_claims["sub"]
+        mock_request.state.mtls_cn = "different-aircraft"  # Doesn't match valid_claims["sub"]
 
         with patch("skylink.auth.settings") as mock_settings:
             mock_settings.mtls_enabled = True
@@ -184,7 +184,7 @@ class TestMTLSMiddleware:
         # Create mock request with transport and SSL
         mock_ssl_object = MagicMock()
         mock_ssl_object.getpeercert.return_value = {
-            "subject": ((("commonName", "vehicle-test"),),),
+            "subject": ((("commonName", "aircraft-test"),),),
         }
 
         mock_transport = MagicMock()
@@ -199,7 +199,7 @@ class TestMTLSMiddleware:
 
         response = await mtls_extraction_middleware(mock_request, mock_call_next)
 
-        assert mock_request.state.mtls_cn == "vehicle-test"
+        assert mock_request.state.mtls_cn == "aircraft-test"
         assert mock_request.state.mtls_verified is True
         assert response == mock_response
 

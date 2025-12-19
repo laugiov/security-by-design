@@ -156,7 +156,7 @@ async def mtls_extraction_middleware(request: Request, call_next):
     TLS certificate and stores it in request.state for later use
     in JWT validation (cross-validation of mTLS identity vs JWT subject).
 
-    The CN is expected to contain the vehicle_id, which should match
+    The CN is expected to contain the aircraft_id, which should match
     the 'sub' claim in the JWT token.
 
     Args:

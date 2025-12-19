@@ -1,7 +1,7 @@
 """Rate limiting module using slowapi.
 
 This module provides rate limiting for the SkyLink API Gateway:
-- Per-vehicle rate limit: 60 requests per minute
+- Per-aircraft rate limit: 60 requests per minute
 - Global rate limit: 10 requests per second
 
 Uses slowapi (based on limits library) for robust rate limiting.
@@ -23,12 +23,12 @@ rate_limit_exceeded_counter = Counter(
 )
 
 # Rate limit configuration
-RATE_LIMIT_PER_VEHICLE = "60/minute"
+RATE_LIMIT_PER_AIRCRAFT = "60/minute"
 RATE_LIMIT_GLOBAL = "10/second"
 
 
-def get_vehicle_id_from_request(request: Request) -> str:
-    """Extract vehicle_id from JWT token for rate limiting.
+def get_aircraft_id_from_request(request: Request) -> str:
+    """Extract aircraft_id from JWT token for rate limiting.
 
     Falls back to remote address if no JWT is present.
 
@@ -36,7 +36,7 @@ def get_vehicle_id_from_request(request: Request) -> str:
         request: The incoming HTTP request
 
     Returns:
-        Vehicle ID from JWT 'sub' claim, or remote address as fallback
+        Aircraft ID from JWT 'sub' claim, or remote address as fallback
     """
     authorization = request.headers.get("authorization")
 
@@ -48,9 +48,9 @@ def get_vehicle_id_from_request(request: Request) -> str:
                 import jwt
 
                 payload = jwt.decode(token, options={"verify_signature": False})
-                vehicle_id = payload.get("sub")
-                if vehicle_id:
-                    return vehicle_id
+                aircraft_id = payload.get("sub")
+                if aircraft_id:
+                    return aircraft_id
             except Exception:
                 pass
 
@@ -58,8 +58,8 @@ def get_vehicle_id_from_request(request: Request) -> str:
     return get_remote_address(request)
 
 
-# Create limiter instance with vehicle_id as key
-limiter = Limiter(key_func=get_vehicle_id_from_request)
+# Create limiter instance with aircraft_id as key
+limiter = Limiter(key_func=get_aircraft_id_from_request)
 
 
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

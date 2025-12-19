@@ -9,7 +9,7 @@
 # Output:
 #   certs/ca/           - Certificate Authority
 #   certs/server/       - Gateway server certificate
-#   certs/clients/      - Test vehicle certificates
+#   certs/clients/      - Test aircraft certificates
 #
 # This script runs non-interactively (overwrites existing certs)
 
@@ -90,24 +90,24 @@ echo "Server certificate generated: ${SERVER_DIR}/server.crt"
 
 # Generate Test Client Certificates
 echo ""
-echo "Step 3/3: Generating Test Vehicle Certificates..."
+echo "Step 3/3: Generating Test Aircraft Certificates..."
 echo "----------------------------------------------------"
 
-TEST_VEHICLES=("vehicle-test-001" "vehicle-test-002" "550e8400-e29b-41d4-a716-446655440000")
+TEST_AIRCRAFTS=("aircraft-test-001" "aircraft-test-002" "550e8400-e29b-41d4-a716-446655440000")
 
-for VEHICLE_ID in "${TEST_VEHICLES[@]}"; do
-    CLIENT_DIR="${CERTS_DIR}/clients/${VEHICLE_ID}"
+for AIRCRAFT_ID in "${TEST_AIRCRAFTS[@]}"; do
+    CLIENT_DIR="${CERTS_DIR}/clients/${AIRCRAFT_ID}"
     mkdir -p "${CLIENT_DIR}"
 
-    openssl genrsa -out "${CLIENT_DIR}/${VEHICLE_ID}.key" 2048 2>/dev/null
-    chmod 600 "${CLIENT_DIR}/${VEHICLE_ID}.key"
+    openssl genrsa -out "${CLIENT_DIR}/${AIRCRAFT_ID}.key" 2048 2>/dev/null
+    chmod 600 "${CLIENT_DIR}/${AIRCRAFT_ID}.key"
 
     openssl req -new \
-        -key "${CLIENT_DIR}/${VEHICLE_ID}.key" \
-        -out "${CLIENT_DIR}/${VEHICLE_ID}.csr" \
-        -subj "/C=FR/ST=IDF/L=Paris/O=SkyLink/OU=Vehicles/CN=${VEHICLE_ID}"
+        -key "${CLIENT_DIR}/${AIRCRAFT_ID}.key" \
+        -out "${CLIENT_DIR}/${AIRCRAFT_ID}.csr" \
+        -subj "/C=FR/ST=IDF/L=Paris/O=SkyLink/OU=Aircrafts/CN=${AIRCRAFT_ID}"
 
-    cat > "${CLIENT_DIR}/${VEHICLE_ID}.ext" << EOF
+    cat > "${CLIENT_DIR}/${AIRCRAFT_ID}.ext" << EOF
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature
@@ -115,17 +115,17 @@ extendedKeyUsage = clientAuth
 EOF
 
     openssl x509 -req \
-        -in "${CLIENT_DIR}/${VEHICLE_ID}.csr" \
+        -in "${CLIENT_DIR}/${AIRCRAFT_ID}.csr" \
         -CA "${CA_DIR}/ca.crt" \
         -CAkey "${CA_DIR}/ca.key" \
         -CAcreateserial \
-        -out "${CLIENT_DIR}/${VEHICLE_ID}.crt" \
+        -out "${CLIENT_DIR}/${AIRCRAFT_ID}.crt" \
         -days 365 \
-        -extfile "${CLIENT_DIR}/${VEHICLE_ID}.ext"
+        -extfile "${CLIENT_DIR}/${AIRCRAFT_ID}.ext"
 
-    rm -f "${CLIENT_DIR}/${VEHICLE_ID}.csr" "${CLIENT_DIR}/${VEHICLE_ID}.ext"
+    rm -f "${CLIENT_DIR}/${AIRCRAFT_ID}.csr" "${CLIENT_DIR}/${AIRCRAFT_ID}.ext"
 
-    echo "Client certificate generated: ${VEHICLE_ID}"
+    echo "Client certificate generated: ${AIRCRAFT_ID}"
 done
 
 # Verify all certificates
@@ -134,8 +134,8 @@ echo "Verifying certificate chain..."
 echo "----------------------------------"
 
 openssl verify -CAfile "${CA_DIR}/ca.crt" "${SERVER_DIR}/server.crt"
-for VEHICLE_ID in "${TEST_VEHICLES[@]}"; do
-    openssl verify -CAfile "${CA_DIR}/ca.crt" "${CERTS_DIR}/clients/${VEHICLE_ID}/${VEHICLE_ID}.crt"
+for AIRCRAFT_ID in "${TEST_AIRCRAFTS[@]}"; do
+    openssl verify -CAfile "${CA_DIR}/ca.crt" "${CERTS_DIR}/clients/${AIRCRAFT_ID}/${AIRCRAFT_ID}.crt"
 done
 
 # Summary
@@ -153,14 +153,14 @@ echo "   ├── server/"
 echo "   │   ├── server.crt     (Gateway certificate)"
 echo "   │   └── server.key     (Gateway private key)"
 echo "   └── clients/"
-for VEHICLE_ID in "${TEST_VEHICLES[@]}"; do
-echo "       ├── ${VEHICLE_ID}/"
-echo "       │   ├── ${VEHICLE_ID}.crt"
-echo "       │   └── ${VEHICLE_ID}.key"
+for AIRCRAFT_ID in "${TEST_AIRCRAFTS[@]}"; do
+echo "       ├── ${AIRCRAFT_ID}/"
+echo "       │   ├── ${AIRCRAFT_ID}.crt"
+echo "       │   └── ${AIRCRAFT_ID}.key"
 done
 echo ""
 echo "Test with curl:"
 echo "   curl --cacert ${CA_DIR}/ca.crt \\"
-echo "        --cert ${CERTS_DIR}/clients/vehicle-test-001/vehicle-test-001.crt \\"
-echo "        --key ${CERTS_DIR}/clients/vehicle-test-001/vehicle-test-001.key \\"
+echo "        --cert ${CERTS_DIR}/clients/aircraft-test-001/aircraft-test-001.crt \\"
+echo "        --key ${CERTS_DIR}/clients/aircraft-test-001/aircraft-test-001.key \\"
 echo "        https://localhost:8000/health"

@@ -4,8 +4,8 @@ This test validates the OAuth flow with REAL Google API using tokens
 already configured in the database (via CLI tool).
 
 ⚠️  Prerequisites:
-1. Vehicle must be configured with OAuth (via scripts/quick_oauth_setup.sh)
-2. Database must contain valid tokens for the test vehicle
+1. Aircraft must be configured with OAuth (via scripts/quick_oauth_setup.sh)
+2. Database must contain valid tokens for the test aircraft
 3. Internet connection required
 """
 
@@ -19,8 +19,8 @@ from contacts.database import SessionLocal
 from contacts.google_people import GooglePeopleClient
 from contacts.oauth import GoogleOAuthClient
 
-# Test vehicle ID (configured via CLI tool)
-TEST_VEHICLE_ID = UUID("550e8400-e29b-41d4-a716-446655440000")
+# Test aircraft ID (configured via CLI tool)
+TEST_AIRCRAFT_ID = UUID("550e8400-e29b-41d4-a716-446655440000")
 
 
 @pytest.mark.e2e
@@ -40,19 +40,19 @@ def test_fetch_contacts_with_existing_tokens():
     # Get tokens directly from database (synchronous)
     from contacts.models import OAuthToken
 
-    token_record = db.query(OAuthToken).filter(OAuthToken.vehicle_id == TEST_VEHICLE_ID).first()
+    token_record = db.query(OAuthToken).filter(OAuthToken.aircraft_id == TEST_AIRCRAFT_ID).first()
 
     if token_record is None:
         db.close()
         pytest.skip(
-            f"No OAuth tokens found for vehicle {TEST_VEHICLE_ID}. "
+            f"No OAuth tokens found for aircraft {TEST_AIRCRAFT_ID}. "
             f"Run 'scripts/quick_oauth_setup.sh' first."
         )
 
     access_token = token_record.access_token
 
     # ==================== TEST: Fetch Contacts ====================
-    print(f"\n[E2E Test] Fetching contacts for vehicle {TEST_VEHICLE_ID}...")
+    print(f"\n[E2E Test] Fetching contacts for aircraft {TEST_AIRCRAFT_ID}...")
 
     people_client = GooglePeopleClient(access_token=access_token)
 
@@ -114,12 +114,12 @@ def test_token_refresh_with_existing_refresh_token():
     from contacts.encryption import decrypt_token
     from contacts.models import OAuthToken
 
-    token_record = db.query(OAuthToken).filter(OAuthToken.vehicle_id == TEST_VEHICLE_ID).first()
+    token_record = db.query(OAuthToken).filter(OAuthToken.aircraft_id == TEST_AIRCRAFT_ID).first()
 
     if token_record is None:
         db.close()
         pytest.skip(
-            f"No OAuth tokens found for vehicle {TEST_VEHICLE_ID}. "
+            f"No OAuth tokens found for aircraft {TEST_AIRCRAFT_ID}. "
             f"Run 'scripts/quick_oauth_setup.sh' first."
         )
 
@@ -134,7 +134,7 @@ def test_token_refresh_with_existing_refresh_token():
     assert client_secret, "GOOGLE_CLIENT_SECRET not set"
 
     # ==================== TEST: Refresh Token ====================
-    print(f"\n[E2E Test] Refreshing access token for vehicle {TEST_VEHICLE_ID}...")
+    print(f"\n[E2E Test] Refreshing access token for aircraft {TEST_AIRCRAFT_ID}...")
 
     oauth_client = GoogleOAuthClient(
         client_id=client_id,

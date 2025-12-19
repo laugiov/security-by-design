@@ -40,14 +40,14 @@ from skylink.models.gateway.obtain_token_request import ObtainTokenRequest
 
 # Telemetry models
 from skylink.models.telemetry.telemetry_event_metrics import TelemetryEventMetrics
-from skylink.models.telemetry.telemetry_event_metrics_seatbelt_status import (
-    TelemetryEventMetricsSeatbeltStatus,
+from skylink.models.telemetry.telemetry_event_metrics_cabin_pressure import (
+    TelemetryEventMetricsCabinPressure,
 )
-from skylink.models.telemetry.telemetry_event_metrics_tire_pressure import (
-    TelemetryEventMetricsTirePressure,
+from skylink.models.telemetry.telemetry_event_metrics_engine_status import (
+    TelemetryEventMetricsEngineStatus,
 )
-from skylink.models.telemetry.telemetry_event_metrics_transmission import (
-    TelemetryEventMetricsTransmission,
+from skylink.models.telemetry.telemetry_event_metrics_flight_controls import (
+    TelemetryEventMetricsFlightControls,
 )
 from skylink.models.telemetry.telemetry_health_check200_response import (
     TelemetryHealthCheck200Response,
@@ -70,14 +70,14 @@ from skylink.models.weather.weather_obtain_token_request import WeatherObtainTok
 
 def test_obtain_token_request_creation():
     """Test ObtainTokenRequest model creation and basic operations."""
-    vehicle_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    model = ObtainTokenRequest(vehicle_id=vehicle_id)
-    assert model.vehicle_id == vehicle_id
-    assert str(vehicle_id) in model.to_str()
+    aircraft_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    model = ObtainTokenRequest(aircraft_id=aircraft_id)
+    assert model.aircraft_id == aircraft_id
+    assert str(aircraft_id) in model.to_str()
     model_dict = model.to_dict()
-    assert model_dict["vehicle_id"] == vehicle_id
+    assert model_dict["aircraft_id"] == aircraft_id
     recreated = ObtainTokenRequest.from_dict(model_dict)
-    assert recreated.vehicle_id == vehicle_id
+    assert recreated.aircraft_id == aircraft_id
 
 
 def test_obtain_token200_response_creation():
@@ -112,12 +112,12 @@ def test_weather_health_check200_response_creation():
 
 def test_weather_obtain_token_request_creation():
     """Test WeatherObtainTokenRequest model creation."""
-    vehicle_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    model = WeatherObtainTokenRequest(vehicle_id=vehicle_id)
-    assert model.vehicle_id == vehicle_id
+    aircraft_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    model = WeatherObtainTokenRequest(aircraft_id=aircraft_id)
+    assert model.aircraft_id == aircraft_id
     model_dict = model.to_dict()
     recreated = WeatherObtainTokenRequest.from_dict(model_dict)
-    assert recreated.vehicle_id == vehicle_id
+    assert recreated.aircraft_id == aircraft_id
 
 
 def test_weather_obtain_token200_response_creation():
@@ -145,11 +145,11 @@ def test_contacts_health_check200_response_creation():
 
 def test_contacts_obtain_token_request_creation():
     """Test ContactsObtainTokenRequest model creation."""
-    vehicle_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    model = ContactsObtainTokenRequest(vehicle_id=vehicle_id)
-    assert model.vehicle_id == vehicle_id
+    aircraft_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    model = ContactsObtainTokenRequest(aircraft_id=aircraft_id)
+    assert model.aircraft_id == aircraft_id
     recreated = ContactsObtainTokenRequest.from_dict(model.to_dict())
-    assert recreated.vehicle_id == vehicle_id
+    assert recreated.aircraft_id == aircraft_id
 
 
 def test_contacts_obtain_token200_response_creation():
@@ -175,11 +175,11 @@ def test_telemetry_health_check200_response_creation():
 
 def test_telemetry_obtain_token_request_creation():
     """Test TelemetryObtainTokenRequest model creation."""
-    vehicle_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    model = TelemetryObtainTokenRequest(vehicle_id=vehicle_id)
-    assert model.vehicle_id == vehicle_id
+    aircraft_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    model = TelemetryObtainTokenRequest(aircraft_id=aircraft_id)
+    assert model.aircraft_id == aircraft_id
     recreated = TelemetryObtainTokenRequest.from_dict(model.to_dict())
-    assert recreated.vehicle_id == vehicle_id
+    assert recreated.aircraft_id == aircraft_id
 
 
 def test_telemetry_obtain_token200_response_creation():
@@ -319,42 +319,42 @@ def test_google_person_photos_inner_creation():
 # ------------- ADDITIONAL TELEMETRY MODELS -------------
 
 
-def test_telemetry_event_metrics_tire_pressure_creation():
-    """Test TelemetryEventMetricsTirePressure model."""
-    model = TelemetryEventMetricsTirePressure(
+def test_telemetry_event_metrics_engine_status_creation():
+    """Test TelemetryEventMetricsEngineStatus model."""
+    model = TelemetryEventMetricsEngineStatus(
         front_left=2.2, front_right=2.3, rear_left=2.1, rear_right=2.2
     )
     assert model.front_left == 2.2
     assert model.front_right == 2.3
     json_str = model.to_json()
     assert "2.2" in json_str
-    recreated = TelemetryEventMetricsTirePressure.from_dict(model.to_dict())
+    recreated = TelemetryEventMetricsEngineStatus.from_dict(model.to_dict())
     assert recreated.rear_right == 2.2
 
 
-def test_telemetry_event_metrics_seatbelt_status_creation():
-    """Test TelemetryEventMetricsSeatbeltStatus model."""
-    model = TelemetryEventMetricsSeatbeltStatus(driver=True, passenger_front=False, rear_left=False)
+def test_telemetry_event_metrics_cabin_pressure_creation():
+    """Test TelemetryEventMetricsCabinPressure model."""
+    model = TelemetryEventMetricsCabinPressure(driver=True, passenger_front=False, rear_left=False)
     model.to_json()  # Test JSON serialization
-    recreated = TelemetryEventMetricsSeatbeltStatus.from_dict(model.to_dict())
+    recreated = TelemetryEventMetricsCabinPressure.from_dict(model.to_dict())
     assert recreated is not None
 
 
-def test_telemetry_event_metrics_transmission_creation():
-    """Test TelemetryEventMetricsTransmission model."""
-    model = TelemetryEventMetricsTransmission(gear=5, mode="sport")
+def test_telemetry_event_metrics_flight_controls_creation():
+    """Test TelemetryEventMetricsFlightControls model."""
+    model = TelemetryEventMetricsFlightControls(gear=5, mode="sport")
     assert model.gear == 5
     json_str = model.to_json()
     assert "sport" in json_str
-    recreated = TelemetryEventMetricsTransmission.from_dict(model.to_dict())
+    recreated = TelemetryEventMetricsFlightControls.from_dict(model.to_dict())
     assert recreated.gear == 5
 
 
-def test_telemetry_event_metrics_transmission_mode_validation():
-    """Test TelemetryEventMetricsTransmission mode enum validation."""
+def test_telemetry_event_metrics_flight_controls_mode_validation():
+    """Test TelemetryEventMetricsFlightControls mode enum validation."""
     # Valid modes
     for mode in ["eco", "normal", "sport", "manual"]:
-        model = TelemetryEventMetricsTransmission(gear=1, mode=mode)
+        model = TelemetryEventMetricsFlightControls(gear=1, mode=mode)
         assert model.mode == mode
         # Test to_str includes the mode
         assert mode in model.to_str() or mode in model.to_dict().get("mode", "")
@@ -363,18 +363,18 @@ def test_telemetry_event_metrics_transmission_mode_validation():
     import pytest
 
     with pytest.raises((ValueError, Exception)):
-        TelemetryEventMetricsTransmission(gear=1, mode="invalid")
+        TelemetryEventMetricsFlightControls(gear=1, mode="invalid")
 
 
 def test_telemetry_event_metrics_creation():
     """Test TelemetryEventMetrics model."""
     model = TelemetryEventMetrics(
         speed=65.5,
-        fuel_level=75.0,
+        altitude=75.0,
         engine_temp=90.0,
     )
     assert model.speed == 65.5
-    assert model.fuel_level == 75.0
+    assert model.altitude == 75.0
     assert "65.5" in model.to_str()
     recreated = TelemetryEventMetrics.from_dict(model.to_dict())
     assert recreated.engine_temp == 90.0

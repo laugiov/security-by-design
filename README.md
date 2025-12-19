@@ -76,10 +76,10 @@
 
 | Control | Description | Implementation |
 |---------|-------------|----------------|
-| **Rate Limiting** | Per-identity throttling | 60 req/min per vehicle_id ([skylink/rate_limit.py](skylink/rate_limit.py)) |
+| **Rate Limiting** | Per-identity throttling | 60 req/min per aircraft_id ([skylink/rate_limit.py](skylink/rate_limit.py)) |
 | **Payload Limits** | DoS protection | 64 KB max request size |
 | **Input Validation** | Strict schema enforcement | Pydantic `extra="forbid"`, OpenAPI `additionalProperties: false` |
-| **Idempotency** | Replay attack mitigation | Unique `(vehicle_id, event_id)` constraint |
+| **Idempotency** | Replay attack mitigation | Unique `(aircraft_id, event_id)` constraint |
 
 **Implementation**: [skylink/middlewares.py](skylink/middlewares.py)
 
@@ -192,10 +192,10 @@ make health
 
 ```bash
 # Get a JWT token
-VEHICLE_ID=$(uuidgen)
+AIRCRAFT_ID=$(uuidgen)
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/json" \
-  -d "{\"vehicle_id\": \"$VEHICLE_ID\"}" | jq -r '.access_token')
+  -d "{\"aircraft_id\": \"$AIRCRAFT_ID\"}" | jq -r '.access_token')
 
 echo "Token: ${TOKEN:0:50}..."
 ```
@@ -210,7 +210,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"vehicle_id\": \"$VEHICLE_ID\",
+    \"aircraft_id\": \"$AIRCRAFT_ID\",
     \"event_id\": \"$EVENT_ID\",
     \"ts\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
     \"metrics\": {\"speed\": 450.5, \"gps\": {\"lat\": 48.8566, \"lon\": 2.3522}}

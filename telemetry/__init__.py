@@ -1,4 +1,4 @@
-"""Telemetry Service - ingestion des événements de télémétrie."""
+"""Telemetry Service - telemetry event ingestion."""
 
-# Version du service (utilisée par main.py / observabilité)
+# Service version (used by main.py / observability)
 __version__ = "1.0.0"

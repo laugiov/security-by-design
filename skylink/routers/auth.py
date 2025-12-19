@@ -15,11 +15,11 @@ router = APIRouter(
 async def obtain_token(request: TokenRequest) -> TokenResponse:
     """Obtain JWT authentication token.
 
-    Authenticate a vehicle and receive a JWT access token.
+    Authenticate a aircraft and receive a JWT access token.
     Token is valid for 15 minutes maximum (Security by Design).
 
     Args:
-        request: Token request containing vehicle_id (UUID)
+        request: Token request containing aircraft_id (UUID)
 
     Returns:
         TokenResponse: JWT token with expiration information
@@ -32,19 +32,19 @@ async def obtain_token(request: TokenRequest) -> TokenResponse:
 
     Security Notes:
         - Token is signed with RS256 (private key)
-        - Vehicle ID becomes the 'sub' claim
+        - Aircraft ID becomes the 'sub' claim
         - Short expiration (15 minutes max)
-        - Token contains no sensitive data (only vehicle_id)
+        - Token contains no sensitive data (only aircraft_id)
 
     Implementation Notes:
-        - No database validation in MVP (trusts vehicle_id)
-        - Future: Validate vehicle exists in DB
-        - Future: Check vehicle status (active/suspended)
-        - Future: Rate-limit token issuance per vehicle
+        - No database validation in MVP (trusts aircraft_id)
+        - Future: Validate aircraft exists in DB
+        - Future: Check aircraft status (active/suspended)
+        - Future: Rate-limit token issuance per aircraft
     """
     try:
         # Generate JWT token signed with RS256
-        token = create_access_token(vehicle_id=str(request.vehicle_id))
+        token = create_access_token(aircraft_id=str(request.aircraft_id))
 
         return TokenResponse(
             access_token=token,

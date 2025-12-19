@@ -1,14 +1,14 @@
 """
-Tests d'intégration pour le routeur Telemetry du gateway SkyLink.
+Integration tests for the SkyLink gateway Telemetry router.
 
-Objectifs :
-- Vérifier que le routeur expose bien une fonction d'ingestion télémétrique
-- Vérifier qu'en cas de succès du service Telemetry, la réponse est renvoyée telle quelle
-- Vérifier la gestion des erreurs réseau (timeout, erreur HTTP générique)
+Objectives:
+- Verify that the router exposes a telemetry ingestion function
+- Verify that in case of Telemetry service success, the response is returned as is
+- Verify network error handling (timeout, generic HTTP error)
 
-Contraintes :
-- Aucun accès aux clés RSA ni aux variables d'environnement sensibles
-- Aucun appel réseau réel : httpx.AsyncClient est toujours mocké
+Constraints:
+- No access to RSA keys or sensitive environment variables
+- No real network calls: httpx.AsyncClient is always mocked
 """
 
 from __future__ import annotations
@@ -26,11 +26,11 @@ from skylink.routers import telemetry as telemetry_router
 
 def _get_ingest_handler() -> Optional[Callable[..., Any]]:
     """
-    Localise la fonction d'ingestion dans le module skylink.routers.telemetry.
+    Locate the ingestion function in the skylink.routers.telemetry module.
 
-    Par convention, on s'attend à trouver une fonction nommée `ingest_telemetry`,
-    mais on reste robuste en cherchant toute fonction dont le nom contient
-    `ingest` et `telemetry`.
+    By convention, we expect to find a function named `ingest_telemetry`,
+    but we remain robust by searching for any function whose name contains
+    `ingest` and `telemetry`.
     """
     # 1. Nom attendu le plus probable (sans utiliser getattr constant pour Ruff B009)
     if hasattr(telemetry_router, "ingest_telemetry"):
@@ -49,34 +49,34 @@ def _get_ingest_handler() -> Optional[Callable[..., Any]]:
     if len(candidates) == 1:
         return candidates[0]
 
-    # Si plusieurs ou aucune : on préfère skipper les tests plutôt que de casser la CI.
+    # If multiple or none: prefer to skip tests rather than break CI.
     return None
 
 
 def _build_handler_kwargs(handler: Callable[..., Any]) -> Dict[str, Any]:
     """
-    Construit dynamiquement les kwargs pour appeler le handler d'ingestion.
+    Dynamically build kwargs to call the ingestion handler.
 
-    On utilise TelemetryEvent.model_construct() pour créer un objet sans validation,
-    ce qui évite de dépendre du schéma exact (champs obligatoires, etc.).
+    We use TelemetryEvent.model_construct() to create an object without validation,
+    which avoids depending on the exact schema (required fields, etc.).
     """
     sig = inspect.signature(handler)
     kwargs: Dict[str, Any] = {}
 
     for name, param in sig.parameters.items():
-        # Paramètre de type événement télémétrique (nom courant : event ou body)
+        # Telemetry event parameter (common name: event or body)
         if name in {"event", "body", "telemetry_event"}:
             kwargs[name] = TelemetryEvent.model_construct()
-        # Paramètre des claims JWT (nom courant : claims)
+        # JWT claims parameter (common name: claims)
         elif name == "claims":
-            # JWTClaims est généralement un Mapping[str, Any] / dict
+            # JWTClaims is typically a Mapping[str, Any] / dict
             kwargs[name] = {"sub": "550e8400-e29b-41d4-a716-446655440000"}
-        # Paramètres FastAPI classiques (request, response, etc.) -> ignorés
+        # Standard FastAPI parameters (request, response, etc.) -> ignored
         elif name in {"request", "response"}:
             if param.default is inspect._empty:
                 kwargs[name] = Mock()
         else:
-            # Autres paramètres : si obligatoires, on met un Mock
+            # Other parameters: if required, use a Mock
             if param.default is inspect._empty:
                 kwargs[name] = Mock()
 
@@ -87,18 +87,18 @@ def _build_handler_kwargs(handler: Callable[..., Any]) -> Dict[str, Any]:
 @patch("skylink.routers.telemetry.AsyncClient")
 async def test_telemetry_ingest_proxies_successfully(mock_async_client: Mock) -> None:
     """
-    Test : le handler d'ingestion proxy correctement la réponse du service Telemetry.
+    Test: the ingestion handler correctly proxies the response from the Telemetry service.
 
-    - httpx.AsyncClient.post est mocké pour renvoyer un status_code 201
-      et un body JSON.
-    - Le handler doit considérer cette réponse comme un succès et renvoyer
-      le JSON tel quel (ou un objet équivalent).
+    - httpx.AsyncClient.post is mocked to return a status_code 201
+      and a JSON body.
+    - The handler must consider this response as a success and return
+      the JSON as is (or an equivalent object).
     """
     handler = _get_ingest_handler()
     if handler is None:
-        pytest.skip("Aucun handler d'ingestion telemetry trouvé dans skylink.routers.telemetry")
+        pytest.skip("No telemetry ingestion handler found in skylink.routers.telemetry")
 
-    # Prépare le contexte AsyncClient mocké
+    # Prepare mocked AsyncClient context
     mock_response = Mock()
     mock_response.status_code = 201
     mock_response.json.return_value = {
@@ -113,8 +113,8 @@ async def test_telemetry_ingest_proxies_successfully(mock_async_client: Mock) ->
     kwargs = _build_handler_kwargs(handler)
     result = await handler(**kwargs)
 
-    # Le handler peut soit renvoyer directement le dict JSON,
-    # soit une Response FastAPI avec .body ou .json().
+    # The handler can either return the JSON dict directly,
+    # or a FastAPI Response with .body or .json().
     if isinstance(result, dict):
         data = result
     elif hasattr(result, "body") or hasattr(result, "media_type"):
@@ -131,14 +131,14 @@ async def test_telemetry_ingest_proxies_successfully(mock_async_client: Mock) ->
 @patch("skylink.routers.telemetry.AsyncClient")
 async def test_telemetry_ingest_handles_timeout(mock_async_client: Mock) -> None:
     """
-    Test : un timeout du service Telemetry doit être transformé
-    en HTTPException 504 Gateway Timeout.
+    Test: a Telemetry service timeout must be transformed
+    into an HTTPException 504 Gateway Timeout.
     """
     from fastapi import HTTPException
 
     handler = _get_ingest_handler()
     if handler is None:
-        pytest.skip("Aucun handler d'ingestion telemetry trouvé dans skylink.routers.telemetry")
+        pytest.skip("No telemetry ingestion handler found in skylink.routers.telemetry")
 
     mock_context = AsyncMock()
     mock_context.__aenter__.return_value.post = AsyncMock(
@@ -159,14 +159,14 @@ async def test_telemetry_ingest_handles_timeout(mock_async_client: Mock) -> None
 @patch("skylink.routers.telemetry.AsyncClient")
 async def test_telemetry_ingest_handles_service_error(mock_async_client: Mock) -> None:
     """
-    Test : une erreur HTTP générique du service Telemetry doit être transformée
-    en HTTPException 502 Bad Gateway.
+    Test: a generic HTTP error from the Telemetry service must be transformed
+    into an HTTPException 502 Bad Gateway.
     """
     from fastapi import HTTPException
 
     handler = _get_ingest_handler()
     if handler is None:
-        pytest.skip("Aucun handler d'ingestion telemetry trouvé dans skylink.routers.telemetry")
+        pytest.skip("No telemetry ingestion handler found in skylink.routers.telemetry")
 
     mock_context = AsyncMock()
     mock_context.__aenter__.return_value.post = AsyncMock(

@@ -3,7 +3,7 @@ info:
   title: SkyLink - Telemetry Service API
   version: 1.0.0
   description: |
-    Internal microservice handling vehicle telemetry ingestion with idempotency.
+    Internal microservice handling aircraft telemetry ingestion with idempotency.
     Includes Auth and Health endpoints.
 servers:
   - url: http://telemetry:8001
@@ -14,7 +14,7 @@ tags:
   - name: auth
     description: Authentication endpoints
   - name: telemetry
-    description: Vehicle telemetry data ingestion
+    description: Aircraft telemetry data ingestion
   - name: health
     description: Health check endpoints
 paths:
@@ -43,7 +43,7 @@ paths:
       tags: [auth]
       summary: Obtain JWT token
       description: |
-        Authenticate a vehicle/client and receive a JWT access token.
+        Authenticate a aircraft/client and receive a JWT access token.
         Token is valid for 15 minutes maximum.
       operationId: telemetry.obtainToken
       requestBody:
@@ -52,13 +52,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [vehicle_id]
+              required: [aircraft_id]
               additionalProperties: false
               properties:
-                vehicle_id:
+                aircraft_id:
                   type: string
                   format: uuid
-                  description: Unique identifier of the vehicle
+                  description: Unique identifier of the aircraft
                   example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
@@ -90,8 +90,8 @@ paths:
       tags: [telemetry]
       summary: Ingest telemetry event
       description: |
-        Store vehicle telemetry data with idempotency guarantee.
-        Idempotency key: (vehicle_id, event_id)
+        Store aircraft telemetry data with idempotency guarantee.
+        Idempotency key: (aircraft_id, event_id)
       operationId: telemetry.ingestTelemetry
       security:
         - bearerAuth: []
@@ -154,11 +154,11 @@ components:
       bearerFormat: JWT
       description: |
         JWT token obtenu via la Gateway (POST /auth/token).
-        Claims: sub (vehicle_id), aud=skylink, iat, exp (max 15 min)
+        Claims: sub (aircraft_id), aud=skylink, iat, exp (max 15 min)
   schemas:
     TelemetryEvent:
       type: object
-      required: [event_id, vehicle_id, ts, metrics]
+      required: [event_id, aircraft_id, ts, metrics]
       additionalProperties: false
       properties:
         event_id:
@@ -166,10 +166,10 @@ components:
           format: uuid
           description: Unique event identifier (UUIDv7 recommended)
           example: "01936d9f-8f5a-7a3e-9c1d-2b3f4c5d6e7f"
-        vehicle_id:
+        aircraft_id:
           type: string
           format: uuid
-          description: Vehicle identifier
+          description: Aircraft identifier
           example: "550e8400-e29b-41d4-a716-446655440000"
         ts:
           type: string
@@ -179,29 +179,29 @@ components:
         metrics:
           type: object
           additionalProperties: false
-          description: Complete set of real-time vehicle telemetry metrics
+          description: Complete set of real-time aircraft telemetry metrics
           properties:
             speed:
               type: number
               format: double
-              description: Vehicle speed in km/h
+              description: Aircraft speed in km/h
               example: 82.3
-            fuel_level:
+            altitude:
               type: number
               format: double
               minimum: 0
               maximum: 100
-              description: Fuel level percentage
+              description: Altitude in feet
               example: 67.2
             engine_temp:
               type: number
               format: double
               description: Engine temperature in °C
               example: 90.5
-            tire_pressure:
+            engine_status:
               type: object
               additionalProperties: false
-              description: Tire pressure per wheel in kPa
+              description: Engine status per engine
               properties:
                 front_left:
                   type: number
@@ -273,10 +273,10 @@ components:
               enum: [armed, deployed, fault]
               description: Airbag system status
               example: armed
-            transmission:
+            flight_controls:
               type: object
               additionalProperties: false
-              description: Transmission data
+              description: FlightControls data
               properties:
                 gear:
                   type: integer
@@ -288,7 +288,7 @@ components:
             lights_status:
               type: object
               additionalProperties: false
-              description: Vehicle lights state
+              description: Aircraft lights state
               properties:
                 headlights:
                   type: boolean
@@ -319,10 +319,10 @@ components:
                 recirculation_mode:
                   type: boolean
                   example: false
-            seatbelt_status:
+            cabin_pressure:
               type: object
               additionalProperties: false
-              description: Seatbelt fastening status per seat
+              description: Cabin pressure status
               properties:
                 driver:
                   type: boolean

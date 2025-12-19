@@ -26,11 +26,11 @@ class TokenStorage:
         """
         self.db = db
 
-    async def get(self, vehicle_id: UUID) -> Optional[dict]:
-        """Get tokens for a vehicle.
+    async def get(self, aircraft_id: UUID) -> Optional[dict]:
+        """Get tokens for a aircraft.
 
         Args:
-            vehicle_id: Vehicle UUID
+            aircraft_id: Aircraft UUID
 
         Returns:
             Dictionary with token data, or None if not found.
@@ -41,7 +41,7 @@ class TokenStorage:
         """
         try:
             token_record = (
-                self.db.query(OAuthToken).filter(OAuthToken.vehicle_id == vehicle_id).first()
+                self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
             )
 
             if token_record is None:
@@ -51,7 +51,7 @@ class TokenStorage:
             decrypted_refresh_token = decrypt_token(token_record.refresh_token)
 
             return {
-                "vehicle_id": str(token_record.vehicle_id),
+                "aircraft_id": str(token_record.aircraft_id),
                 "provider": token_record.provider,
                 "access_token": token_record.access_token,
                 "refresh_token": decrypted_refresh_token,  # Decrypted
@@ -66,11 +66,11 @@ class TokenStorage:
         except Exception as e:
             raise TokenStorageError(f"Error fetching tokens: {e}") from e
 
-    async def save(self, vehicle_id: UUID, tokens: dict) -> None:
-        """Save or update tokens for a vehicle.
+    async def save(self, aircraft_id: UUID, tokens: dict) -> None:
+        """Save or update tokens for a aircraft.
 
         Args:
-            vehicle_id: Vehicle UUID
+            aircraft_id: Aircraft UUID
             tokens: Dictionary containing token data:
                 - access_token (str): Access token
                 - refresh_token (str): Refresh token (will be encrypted)
@@ -91,7 +91,7 @@ class TokenStorage:
                 expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
 
             # Check if token already exists
-            existing = self.db.query(OAuthToken).filter(OAuthToken.vehicle_id == vehicle_id).first()
+            existing = self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
 
             if existing:
                 # Update existing record
@@ -106,7 +106,7 @@ class TokenStorage:
             else:
                 # Create new record
                 new_token = OAuthToken(
-                    vehicle_id=vehicle_id,
+                    aircraft_id=aircraft_id,
                     provider=tokens.get("provider", "google"),
                     access_token=tokens["access_token"],
                     refresh_token=encrypted_refresh_token,
@@ -124,11 +124,11 @@ class TokenStorage:
             self.db.rollback()
             raise TokenStorageError(f"Error saving tokens: {e}") from e
 
-    async def delete(self, vehicle_id: UUID) -> bool:
-        """Delete tokens for a vehicle.
+    async def delete(self, aircraft_id: UUID) -> bool:
+        """Delete tokens for a aircraft.
 
         Args:
-            vehicle_id: Vehicle UUID
+            aircraft_id: Aircraft UUID
 
         Returns:
             True if tokens were deleted, False if not found
@@ -138,7 +138,7 @@ class TokenStorage:
         """
         try:
             token_record = (
-                self.db.query(OAuthToken).filter(OAuthToken.vehicle_id == vehicle_id).first()
+                self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
             )
 
             if token_record is None:
@@ -155,11 +155,11 @@ class TokenStorage:
             self.db.rollback()
             raise TokenStorageError(f"Error deleting tokens: {e}") from e
 
-    async def is_expired(self, vehicle_id: UUID) -> Optional[bool]:
+    async def is_expired(self, aircraft_id: UUID) -> Optional[bool]:
         """Check if access token is expired.
 
         Args:
-            vehicle_id: Vehicle UUID
+            aircraft_id: Aircraft UUID
 
         Returns:
             True if expired, False if valid, None if not found
@@ -169,7 +169,7 @@ class TokenStorage:
         """
         try:
             token_record = (
-                self.db.query(OAuthToken).filter(OAuthToken.vehicle_id == vehicle_id).first()
+                self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
             )
 
             if token_record is None:

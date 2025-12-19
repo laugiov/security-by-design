@@ -1,175 +1,175 @@
-"""Schémas Pydantic pour le service de télémétrie."""
+"""Pydantic schemas for the telemetry service."""
 
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# ---------- Sous-modèles pour metrics ----------
+# ---------- Sub-models for metrics ----------
 
 
-class TirePressure(BaseModel):
-    """Pression des pneus en kPa par roue."""
+class EngineStatus(BaseModel):
+    """Tire pressure in kPa per wheel."""
 
     model_config = ConfigDict(extra="forbid")
 
-    front_left: float | None = Field(None, description="Pression pneu avant gauche")
-    front_right: float | None = Field(None, description="Pression pneu avant droit")
-    rear_left: float | None = Field(None, description="Pression pneu arrière gauche")
-    rear_right: float | None = Field(None, description="Pression pneu arrière droit")
+    front_left: float | None = Field(None, description="Front left tire pressure")
+    front_right: float | None = Field(None, description="Front right tire pressure")
+    rear_left: float | None = Field(None, description="Rear left tire pressure")
+    rear_right: float | None = Field(None, description="Rear right tire pressure")
 
 
 class GpsInfo(BaseModel):
-    """Informations GPS (position + mouvement)."""
+    """GPS information (position + movement)."""
 
     model_config = ConfigDict(extra="forbid")
 
     lat: float | None = Field(None, description="Latitude")
     lon: float | None = Field(None, description="Longitude")
-    heading: float | None = Field(None, description="Cap en degrés")
-    altitude: float | None = Field(None, description="Altitude en mètres")
-    speed_over_ground: float | None = Field(None, description="Vitesse sol en km/h")
+    heading: float | None = Field(None, description="Heading in degrees")
+    altitude: float | None = Field(None, description="Altitude in meters")
+    speed_over_ground: float | None = Field(None, description="Ground speed in km/h")
 
 
-class TransmissionInfo(BaseModel):
-    """Infos de boîte de vitesse."""
+class FlightControlsInfo(BaseModel):
+    """Gearbox information."""
 
     model_config = ConfigDict(extra="forbid")
 
-    gear: int | None = Field(None, description="Rapport engagé")
+    gear: int | None = Field(None, description="Engaged gear")
     mode: str | None = Field(
         None,
-        description="Mode de conduite (eco, normal, sport, manual)",
+        description="Driving mode (eco, normal, sport, manual)",
     )
 
 
 class LightsStatus(BaseModel):
-    """État des feux du véhicule."""
+    """Aircraft lights status."""
 
     model_config = ConfigDict(extra="forbid")
 
-    headlights: bool | None = Field(None, description="Phares allumés")
-    brake_lights: bool | None = Field(None, description="Feux stop")
-    turn_signal_left: bool | None = Field(None, description="Clignotant gauche")
-    turn_signal_right: bool | None = Field(None, description="Clignotant droit")
+    headlights: bool | None = Field(None, description="Headlights on")
+    brake_lights: bool | None = Field(None, description="Brake lights")
+    turn_signal_left: bool | None = Field(None, description="Left turn signal")
+    turn_signal_right: bool | None = Field(None, description="Right turn signal")
 
 
 class ClimateControl(BaseModel):
-    """État de la climatisation et chauffage."""
+    """Air conditioning and heating status."""
 
     model_config = ConfigDict(extra="forbid")
 
-    temperature_setting: float | None = Field(None, description="Température réglée")
-    fan_speed: int | None = Field(None, description="Vitesse du ventilateur")
-    ac_on: bool | None = Field(None, description="AC activée")
-    recirculation_mode: bool | None = Field(None, description="Mode recyclage d'air activé")
+    temperature_setting: float | None = Field(None, description="Set temperature")
+    fan_speed: int | None = Field(None, description="Fan speed")
+    ac_on: bool | None = Field(None, description="AC enabled")
+    recirculation_mode: bool | None = Field(None, description="Air recirculation mode enabled")
 
 
-class SeatbeltStatus(BaseModel):
-    """Bouclage des ceintures par siège."""
+class CabinPressure(BaseModel):
+    """Seatbelt fastening status by seat."""
 
     model_config = ConfigDict(extra="forbid")
 
-    driver: bool | None = Field(None, description="Ceinture conducteur bouclée")
-    passenger_front: bool | None = Field(None, description="Ceinture passager avant")
-    rear_left: bool | None = Field(None, description="Ceinture arrière gauche")
-    rear_center: bool | None = Field(None, description="Ceinture arrière centrale")
-    rear_right: bool | None = Field(None, description="Ceinture arrière droite")
+    driver: bool | None = Field(None, description="Driver seatbelt fastened")
+    passenger_front: bool | None = Field(None, description="Front passenger seatbelt")
+    rear_left: bool | None = Field(None, description="Rear left seatbelt")
+    rear_center: bool | None = Field(None, description="Rear center seatbelt")
+    rear_right: bool | None = Field(None, description="Rear right seatbelt")
 
 
 class Metrics(BaseModel):
-    """Ensemble des métriques télémétriques (champ metrics de l'OpenAPI)."""
+    """Complete set of telemetry metrics (metrics field from OpenAPI)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    speed: float | None = Field(None, description="Vitesse en km/h")
-    fuel_level: float | None = Field(
+    speed: float | None = Field(None, description="Speed in km/h")
+    altitude: float | None = Field(
         None,
         ge=0,
         le=100,
-        description="Niveau de carburant en %",
+        description="Altitude in feet",
     )
-    engine_temp: float | None = Field(None, description="Température moteur en °C")
-    tire_pressure: TirePressure | None = Field(None, description="Pression des pneus")
+    engine_temp: float | None = Field(None, description="Engine temperature in °C")
+    engine_status: EngineStatus | None = Field(None, description="Tire pressure")
     oil_level: float | None = Field(
         None,
         ge=0,
         le=100,
-        description="Niveau d'huile en %",
+        description="Oil level in %",
     )
-    outside_temp: float | None = Field(None, description="Température extérieure en °C")
+    outside_temp: float | None = Field(None, description="Outside temperature in °C")
     brake_status: str | None = Field(
         None,
-        description="État du système de freinage (ok, worn, malfunction)",
+        description="Brake system status (ok, worn, malfunction)",
     )
     battery_level: float | None = Field(
         None,
         ge=0,
         le=100,
-        description="Niveau de batterie en %",
+        description="Battery level in %",
     )
-    gps: GpsInfo | None = Field(None, description="Informations de navigation GPS")
+    gps: GpsInfo | None = Field(None, description="GPS navigation information")
     airbag_status: str | None = Field(
         None,
-        description="État du système d'airbag (armed, deployed, fault)",
+        description="Airbag system status (armed, deployed, fault)",
     )
-    transmission: TransmissionInfo | None = Field(None, description="Informations transmission")
-    lights_status: LightsStatus | None = Field(None, description="État des feux")
-    climate_control: ClimateControl | None = Field(None, description="Climatisation / chauffage")
-    seatbelt_status: SeatbeltStatus | None = Field(None, description="Bouclage des ceintures")
+    flight_controls: FlightControlsInfo | None = Field(None, description="Flight controls information")
+    lights_status: LightsStatus | None = Field(None, description="Lights status")
+    climate_control: ClimateControl | None = Field(None, description="Air conditioning / heating")
+    cabin_pressure: CabinPressure | None = Field(None, description="Seatbelt fastening")
 
 
-# ---------- Modèles principaux ----------
+# ---------- Main models ----------
 
 
 class TelemetryEvent(BaseModel):
-    """Événement de télémétrie (contrat API /telemetry)."""
+    """Telemetry event (API contract /telemetry)."""
 
     model_config = ConfigDict(extra="forbid")
 
     event_id: UUID = Field(
         ...,
-        description="Identifiant unique de l'événement (UUID)",
+        description="Unique event identifier (UUID)",
     )
-    vehicle_id: UUID = Field(
+    aircraft_id: UUID = Field(
         ...,
-        description="Identifiant véhicule (UUID)",
+        description="Aircraft identifier (UUID)",
     )
     ts: datetime = Field(
         ...,
-        description="Timestamp de l'événement (ISO 8601 UTC)",
+        description="Event timestamp (ISO 8601 UTC)",
     )
     metrics: Metrics = Field(
         ...,
-        description="Ensemble des métriques temps réel",
+        description="Complete set of real-time metrics",
     )
 
 
 class TelemetryIngestResponse(BaseModel):
-    """Réponse pour POST /telemetry (201 et 200)."""
+    """Response for POST /telemetry (201 and 200)."""
 
     model_config = ConfigDict(extra="forbid")
 
     status: str = Field(
         ...,
-        description="created ou duplicate",
+        description="created or duplicate",
         examples=["created", "duplicate"],
     )
     event_id: UUID = Field(
         ...,
-        description="Identifiant de l'événement concerné",
+        description="Identifier of the concerned event",
     )
 
 
 class HealthCheckResponse(BaseModel):
-    """Réponse de /health."""
+    """Response for /health."""
 
-    status: str = Field(..., description="Statut du service")
-    service: str = Field(..., description="Nom du service")
+    status: str = Field(..., description="Service status")
+    service: str = Field(..., description="Service name")
 
 
 class Error(BaseModel):
-    """Modèle d'erreur simple (aligné sur Error commun côté gateway)."""
+    """Simple error model (aligned with common Error on gateway side)."""
 
-    code: str = Field(..., description="Code d'erreur applicatif")
-    message: str = Field(..., description="Message d'erreur lisible")
+    code: str = Field(..., description="Application error code")
+    message: str = Field(..., description="Human-readable error message")

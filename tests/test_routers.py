@@ -15,7 +15,7 @@ def test_auth_token_success():
     """Test auth token endpoint returns 200 (now implemented with RS256)."""
     response = client.post(
         "/auth/token",
-        json={"vehicle_id": "550e8400-e29b-41d4-a716-446655440000"},
+        json={"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -26,7 +26,7 @@ def test_auth_token_success():
 
 def test_auth_token_with_invalid_uuid():
     """Test auth token endpoint with invalid UUID."""
-    response = client.post("/auth/token", json={"vehicle_id": "invalid-uuid"})
+    response = client.post("/auth/token", json={"aircraft_id": "invalid-uuid"})
     assert response.status_code == 400  # Validation error (handled by our exception handler)
 
 
@@ -64,7 +64,7 @@ def test_telemetry_token_success():
     """Test telemetry token endpoint returns mock token."""
     response = client.post(
         "/telemetry/token",
-        json={"vehicle_id": "550e8400-e29b-41d4-a716-446655440000"},
+        json={"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -77,11 +77,11 @@ def test_telemetry_ingest_requires_auth():
     """Test telemetry ingest endpoint requires JWT authentication."""
     telemetry_data = {
         "event_id": "550e8400-e29b-41d4-a716-446655440001",
-        "vehicle_id": "550e8400-e29b-41d4-a716-446655440000",
+        "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
         "ts": "2025-01-15T12:00:00Z",
         "metrics": {
             "speed": 65.5,
-            "fuel_level": 75.0,
+            "altitude": 75.0,
             "engine_temp": 90.0,
         },
     }
@@ -136,7 +136,7 @@ def test_all_health_endpoints():
 )
 def test_all_token_endpoints(endpoint, expected_status):
     """Test all token endpoints return expected status."""
-    payload = {"vehicle_id": "550e8400-e29b-41d4-a716-446655440000"}
+    payload = {"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"}
     response = client.post(endpoint, json=payload)
     assert response.status_code == expected_status
 

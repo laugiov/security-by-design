@@ -29,7 +29,7 @@ def client():
     @app.get("/protected")
     async def protected_endpoint(claims: JWTClaimsLocal):
         """Test endpoint that requires authentication."""
-        return {"message": "success", "vehicle_id": claims["sub"]}
+        return {"message": "success", "aircraft_id": claims["sub"]}
 
     # Use context manager to properly manage app lifecycle
     with TestClient(app) as test_client:
@@ -43,9 +43,9 @@ def client():
 
 def test_create_access_token_success():
     """Test that create_access_token generates valid JWT."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
 
-    token = create_access_token(vehicle_id)
+    token = create_access_token(aircraft_id)
 
     # Token should be a non-empty string
     assert isinstance(token, str)
@@ -53,7 +53,7 @@ def test_create_access_token_success():
 
     # Decode without verification to check structure
     unverified = jwt.decode(token, options={"verify_signature": False})
-    assert unverified["sub"] == vehicle_id
+    assert unverified["sub"] == aircraft_id
     assert unverified["aud"] == "skylink"
     assert "iat" in unverified
     assert "exp" in unverified
@@ -61,9 +61,9 @@ def test_create_access_token_success():
 
 def test_create_access_token_expiration():
     """Test that token has correct expiration time."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
 
-    token = create_access_token(vehicle_id)
+    token = create_access_token(aircraft_id)
 
     # Decode to check expiration
     unverified = jwt.decode(token, options={"verify_signature": False})
@@ -83,34 +83,34 @@ def test_create_access_token_expiration():
 
 def test_create_access_token_signature():
     """Test that token is signed with RS256."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
 
-    token = create_access_token(vehicle_id)
+    token = create_access_token(aircraft_id)
 
     # Should be verifiable with public key
     public_key = settings.get_public_key()
     payload = jwt.decode(token, public_key, algorithms=["RS256"], audience="skylink")
 
-    assert payload["sub"] == vehicle_id
+    assert payload["sub"] == aircraft_id
 
 
-def test_create_access_token_different_vehicles():
-    """Test that different vehicles get different tokens."""
-    vehicle_id_1 = "550e8400-e29b-41d4-a716-446655440000"
-    vehicle_id_2 = "660e8400-e29b-41d4-a716-446655440111"
+def test_create_access_token_different_aircrafts():
+    """Test that different aircrafts get different tokens."""
+    aircraft_id_1 = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id_2 = "660e8400-e29b-41d4-a716-446655440111"
 
-    token_1 = create_access_token(vehicle_id_1)
-    token_2 = create_access_token(vehicle_id_2)
+    token_1 = create_access_token(aircraft_id_1)
+    token_2 = create_access_token(aircraft_id_2)
 
     # Tokens should be different
     assert token_1 != token_2
 
-    # Each should contain correct vehicle_id
+    # Each should contain correct aircraft_id
     payload_1 = jwt.decode(token_1, options={"verify_signature": False})
     payload_2 = jwt.decode(token_2, options={"verify_signature": False})
 
-    assert payload_1["sub"] == vehicle_id_1
-    assert payload_2["sub"] == vehicle_id_2
+    assert payload_1["sub"] == aircraft_id_1
+    assert payload_2["sub"] == aircraft_id_2
 
 
 # ============================================================================
@@ -120,15 +120,15 @@ def test_create_access_token_different_vehicles():
 
 def test_verify_jwt_with_valid_token(client):
     """Test that verify_jwt accepts valid RS256 token."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
-    token = create_access_token(vehicle_id)
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
+    token = create_access_token(aircraft_id)
 
     response = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
     data = response.json()
     assert data["message"] == "success"
-    assert data["vehicle_id"] == vehicle_id
+    assert data["aircraft_id"] == aircraft_id
 
 
 def test_verify_jwt_missing_authorization_header(client):
@@ -158,12 +158,12 @@ def test_verify_jwt_invalid_format_no_token(client):
 def test_verify_jwt_expired_token(client):
     """Test that verify_jwt rejects expired tokens."""
     # Create a token that expired 1 hour ago
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
     past_time = datetime.now(timezone.utc) - timedelta(hours=1)
     expired_time = past_time - timedelta(minutes=15)
 
     payload = {
-        "sub": vehicle_id,
+        "sub": aircraft_id,
         "aud": "skylink",
         "iat": int(expired_time.timestamp()),
         "exp": int(past_time.timestamp()),  # Expired
@@ -192,11 +192,11 @@ def test_verify_jwt_wrong_signature():
     on verifying our key configuration and token creation work correctly.
     """
     # Create two tokens with different claims
-    vehicle_id_1 = "550e8400-e29b-41d4-a716-446655440000"
-    vehicle_id_2 = "660e8400-e29b-41d4-a716-446655440111"
+    aircraft_id_1 = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id_2 = "660e8400-e29b-41d4-a716-446655440111"
 
-    token_1 = create_access_token(vehicle_id_1)
-    token_2 = create_access_token(vehicle_id_2)
+    token_1 = create_access_token(aircraft_id_1)
+    token_2 = create_access_token(aircraft_id_2)
 
     # Parse tokens
     parts_1 = token_1.split(".")
@@ -217,8 +217,8 @@ def test_verify_jwt_wrong_signature():
         token_2, settings.get_public_key(), algorithms=["RS256"], audience="skylink"
     )
 
-    assert decoded_1["sub"] == vehicle_id_1
-    assert decoded_2["sub"] == vehicle_id_2
+    assert decoded_1["sub"] == aircraft_id_1
+    assert decoded_2["sub"] == aircraft_id_2
 
     # 4. Verify signature is non-trivial (contains enough entropy)
     # RS256 signatures are 256 bytes = ~342 base64url chars
@@ -228,11 +228,11 @@ def test_verify_jwt_wrong_signature():
 
 def test_verify_jwt_wrong_audience(client):
     """Test that verify_jwt rejects tokens with wrong audience."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
     now = datetime.now(timezone.utc)
 
     payload = {
-        "sub": vehicle_id,
+        "sub": aircraft_id,
         "aud": "wrong-audience",  # Wrong audience
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=15)).timestamp()),
@@ -266,8 +266,8 @@ def test_verify_jwt_empty_token(client):
 
 def test_verify_jwt_case_insensitive_bearer(client):
     """Test that 'Bearer' is case-insensitive."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
-    token = create_access_token(vehicle_id)
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
+    token = create_access_token(aircraft_id)
 
     # Test with lowercase 'bearer'
     response = client.get("/protected", headers={"Authorization": f"bearer {token}"})
@@ -289,8 +289,8 @@ def test_verify_jwt_www_authenticate_header(client):
 
 def test_verify_jwt_returns_expected_claims(client):
     """Test that verify_jwt returns expected claim structure."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
-    token = create_access_token(vehicle_id)
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
+    token = create_access_token(aircraft_id)
 
     response = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
 
@@ -298,7 +298,7 @@ def test_verify_jwt_returns_expected_claims(client):
     data = response.json()
 
     # Verify the claims are passed through correctly
-    assert data["vehicle_id"] == vehicle_id
+    assert data["aircraft_id"] == aircraft_id
 
 
 # ============================================================================
@@ -308,25 +308,25 @@ def test_verify_jwt_returns_expected_claims(client):
 
 def test_full_auth_flow(client):
     """Test complete authentication flow: issue token → use token → verify."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
 
     # Step 1: Create token
-    token = create_access_token(vehicle_id)
+    token = create_access_token(aircraft_id)
     assert len(token) > 50
 
     # Step 2: Use token to access protected endpoint
     response = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
 
-    # Step 3: Verify response contains correct vehicle_id
+    # Step 3: Verify response contains correct aircraft_id
     data = response.json()
-    assert data["vehicle_id"] == vehicle_id
+    assert data["aircraft_id"] == aircraft_id
 
 
 def test_token_reuse(client):
     """Test that same token can be used multiple times until expiration."""
-    vehicle_id = "550e8400-e29b-41d4-a716-446655440000"
-    token = create_access_token(vehicle_id)
+    aircraft_id = "550e8400-e29b-41d4-a716-446655440000"
+    token = create_access_token(aircraft_id)
 
     # Use token 3 times
     for _ in range(3):
@@ -334,19 +334,19 @@ def test_token_reuse(client):
         assert response.status_code == 200
 
 
-def test_multiple_vehicles_concurrent(client):
-    """Test that multiple vehicles can have valid tokens simultaneously."""
-    vehicles = [
+def test_multiple_aircrafts_concurrent(client):
+    """Test that multiple aircrafts can have valid tokens simultaneously."""
+    aircrafts = [
         "550e8400-e29b-41d4-a716-446655440000",
         "660e8400-e29b-41d4-a716-446655440111",
         "770e8400-e29b-41d4-a716-446655440222",
     ]
 
-    tokens = {vid: create_access_token(vid) for vid in vehicles}
+    tokens = {vid: create_access_token(vid) for vid in aircrafts}
 
     # All tokens should work
-    for vehicle_id, token in tokens.items():
+    for aircraft_id, token in tokens.items():
         response = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         data = response.json()
-        assert data["vehicle_id"] == vehicle_id
+        assert data["aircraft_id"] == aircraft_id

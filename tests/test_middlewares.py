@@ -97,7 +97,7 @@ def test_json_logging_middleware_logs_different_methods(capsys):
     # Test POST request
     response = client.post(
         "/auth/token",
-        json={"vehicle_id": "550e8400-e29b-41d4-a716-446655440000"},
+        json={"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"},
     )
 
     trace_id = response.headers.get("X-Trace-Id")

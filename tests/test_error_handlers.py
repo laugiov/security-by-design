@@ -46,7 +46,7 @@ def test_create_error_response_without_details():
 def test_create_error_response_with_details():
     """Test create_error_response helper with details."""
     details = {
-        "fields": [{"field": "vehicle_id", "issue": "format", "message": "Must be a valid UUID"}]
+        "fields": [{"field": "aircraft_id", "issue": "format", "message": "Must be a valid UUID"}]
     }
 
     result = create_error_response(
@@ -61,8 +61,8 @@ def test_create_error_response_with_details():
 # Tests for validation exception handler
 def test_validation_exception_handler_invalid_uuid():
     """Test validation exception handler with invalid UUID."""
-    # Send invalid vehicle_id (not a UUID)
-    response = client.post("/auth/token", json={"vehicle_id": "not-a-uuid"})
+    # Send invalid aircraft_id (not a UUID)
+    response = client.post("/auth/token", json={"aircraft_id": "not-a-uuid"})
 
     assert response.status_code == 400
     data = response.json()
@@ -77,14 +77,14 @@ def test_validation_exception_handler_invalid_uuid():
     assert "fields" in data["error"]["details"]
     assert len(data["error"]["details"]["fields"]) > 0
 
-    # Check that vehicle_id is mentioned in field errors
+    # Check that aircraft_id is mentioned in field errors
     field_names = [f["field"] for f in data["error"]["details"]["fields"]]
-    assert any("vehicle_id" in field for field in field_names)
+    assert any("aircraft_id" in field for field in field_names)
 
 
 def test_validation_exception_handler_missing_required_field():
     """Test validation exception handler with missing required field."""
-    # Send request without vehicle_id
+    # Send request without aircraft_id
     response = client.post("/auth/token", json={})
 
     assert response.status_code == 400
@@ -102,7 +102,7 @@ def test_validation_exception_handler_extra_field():
     response = client.post(
         "/auth/token",
         json={
-            "vehicle_id": "550e8400-e29b-41d4-a716-446655440000",
+            "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
             "extra_field": "not_allowed",
         },
     )
@@ -152,7 +152,7 @@ def test_general_exception_handler():
 
 def test_error_response_has_security_headers():
     """Test that error responses include security headers."""
-    response = client.post("/auth/token", json={"vehicle_id": "invalid"})
+    response = client.post("/auth/token", json={"aircraft_id": "invalid"})
 
     # Even error responses should have security headers
     assert response.headers["X-Content-Type-Options"] == "nosniff"
@@ -161,7 +161,7 @@ def test_error_response_has_security_headers():
 
 def test_error_response_has_trace_id():
     """Test that error responses include trace_id."""
-    response = client.post("/auth/token", json={"vehicle_id": "invalid"})
+    response = client.post("/auth/token", json={"aircraft_id": "invalid"})
 
     # Error responses should have trace_id for correlation
     assert "X-Trace-Id" in response.headers

@@ -32,10 +32,10 @@ class ContactsStartGoogleOAuth200Response(BaseModel):
     """  # noqa: E501
 
     authorization_url: StrictStr = Field(
-        description="URL Google OAuth complète (incluant state, code_challenge…).",
+        description="Complete Google OAuth URL (including state, code_challenge, etc.).",
     )
     state: StrictStr = Field(
-        description="État anti-CSRF à renvoyer tel quel à la callback.",
+        description="Anti-CSRF state to return unchanged to the callback.",
     )
     code_challenge_method: StrictStr
     __properties: ClassVar[List[str]] = [

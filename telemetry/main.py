@@ -1,4 +1,4 @@
-"""Point d'entrée FastAPI pour le Telemetry Service."""
+"""FastAPI entry point for the Telemetry Service."""
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -11,10 +11,10 @@ from telemetry.schemas import HealthCheckResponse
 app = FastAPI(
     title="SkyLink Telemetry Service",
     version=__version__,
-    description="Internal microservice handling vehicle telemetry ingestion with idempotency.",
+    description="Internal microservice handling aircraft telemetry ingestion with idempotency.",
 )
 
-# Routes principales (auth, telemetry)
+# Main routes (auth, telemetry)
 app.include_router(telemetry_router)
 
 
@@ -24,7 +24,7 @@ app.include_router(telemetry_router)
     tags=["health"],
 )
 async def health_check() -> HealthCheckResponse:
-    """Health check simple aligné avec telemetry.yaml."""
+    """Simple health check aligned with telemetry.yaml."""
     return HealthCheckResponse(
         status="healthy",
         service=settings.service_name,
@@ -33,7 +33,7 @@ async def health_check() -> HealthCheckResponse:
 
 @app.get("/", tags=["info"])
 async def root() -> JSONResponse:
-    """Infos basiques sur le service."""
+    """Basic service information."""
     return JSONResponse(
         {
             "service": settings.service_name,

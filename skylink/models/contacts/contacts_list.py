@@ -30,11 +30,11 @@ except ImportError:
 
 class ContactsList(BaseModel):
     """
-    Résultat paginé de `people.connections.list` (normalisé par le service).
+    Paginated result from `people.connections.list` (normalized by the service).
     """  # noqa: E501
 
     items: List[GooglePerson] = Field(
-        description=("Liste de personnes, structure fidèle au masque `person_fields`."),
+        description=("List of persons, structure matches the `person_fields` mask."),
     )
     next_page_token: Optional[StrictStr] = None
     next_sync_token: Optional[StrictStr] = None

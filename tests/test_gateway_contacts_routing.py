@@ -12,13 +12,13 @@ from skylink.main import app
 client = TestClient(app)
 
 # Valid JWT token for testing
-VALID_VEHICLE_ID = "550e8400-e29b-41d4-a716-446655440000"
+VALID_AIRCRAFT_ID = "550e8400-e29b-41d4-a716-446655440000"
 
 
 @pytest.fixture
 def valid_token():
     """Fixture providing a valid JWT token."""
-    return create_access_token(VALID_VEHICLE_ID)
+    return create_access_token(VALID_AIRCRAFT_ID)
 
 
 class TestContactsRouting:

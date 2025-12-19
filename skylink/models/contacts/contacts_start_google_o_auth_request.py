@@ -32,7 +32,7 @@ class ContactsStartGoogleOAuthRequest(BaseModel):
     """  # noqa: E501
 
     redirect_uri: StrictStr = Field(
-        description="URI front à laquelle Google renverra `code` et `state`.",
+        description="Frontend URI where Google will redirect with `code` and `state`.",
     )
     include_other_contacts: Optional[StrictBool] = Field(
         default=False,

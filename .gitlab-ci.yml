@@ -1,5 +1,5 @@
-# SkyLink — CI de référence (MVP sécurisé)
-# Stages: lint, test, build, scan, sbom, security-scan, (option) sign.
+# SkyLink — Reference CI (secure MVP)
+# Stages: lint, test, build, scan, sbom, security-scan, (optional) sign.
 
 stages: [lint, test, build, scan, sbom, security-scan, sign]
 
@@ -45,7 +45,7 @@ test:
       junit: report.xml
 
 # ------------- BUILD IMAGE (KANIKO) -------------
-# Construit et pousse l'image Gateway dans le registry GitLab sans runner privilégié
+# Builds and pushes the Gateway image to GitLab registry without privileged runner
 build_image:
   stage: build
   image:
@@ -53,7 +53,7 @@ build_image:
     entrypoint: [""]
   before_script: []
   variables:
-    # Tag court + dernier
+    # Short tag + latest
     IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   script:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
@@ -197,8 +197,8 @@ zap_scan:
   allow_failure: true
 
 # ------------- SIGNATURE & ATTESTATION (Supply Chain Security) -------------
-# Signe l'image Docker et attache l'attestation SBOM avec cosign
-# Requiert: COSIGN_PRIVATE_KEY et COSIGN_PASSWORD en variables CI protegees
+# Signs the Docker image and attaches the SBOM attestation with cosign
+# Requires: COSIGN_PRIVATE_KEY and COSIGN_PASSWORD as protected CI variables
 
 sign_image:
   stage: sign
@@ -210,10 +210,10 @@ sign_image:
     COSIGN_YES: "true"  # Skip confirmation prompts
   script:
     - cosign version
-    # Authentification au registry GitLab
+    # Authenticate to GitLab registry
     - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - echo "Signing image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
-    # Signer l'image avec la cle (COSIGN_PASSWORD dechiffre la cle privee)
+    # Sign the image with the key (COSIGN_PASSWORD decrypts the private key)
     - export COSIGN_PASSWORD="$COSIGN_PASSWORD"
     - cosign sign --key "$COSIGN_PRIVATE_KEY" "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
     - cosign sign --key "$COSIGN_PRIVATE_KEY" "$CI_REGISTRY_IMAGE:latest"
@@ -226,7 +226,7 @@ sign_image:
   allow_failure: true
   needs: ["build_image", "trivy_image"]
 
-# Attache l'attestation SBOM a l'image signee
+# Attach the SBOM attestation to the signed image
 attest_sbom:
   stage: sign
   image:
@@ -237,10 +237,10 @@ attest_sbom:
     COSIGN_YES: "true"
   script:
     - cosign version
-    # Authentification au registry GitLab
+    # Authenticate to GitLab registry
     - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - echo "Attesting SBOM to image $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
-    # Attacher le SBOM comme attestation (COSIGN_PASSWORD dechiffre la cle privee)
+    # Attach the SBOM as attestation (COSIGN_PASSWORD decrypts the private key)
     - export COSIGN_PASSWORD="$COSIGN_PASSWORD"
     - cosign attest --key "$COSIGN_PRIVATE_KEY" --predicate sbom.json --type cyclonedx "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
     - echo "SBOM attestation attached successfully!"
@@ -255,7 +255,7 @@ attest_sbom:
     paths:
       - sbom.json
 
-# Verification de la signature (job de test)
+# Signature verification (test job)
 verify_signature:
   stage: sign
   image:
@@ -264,15 +264,15 @@ verify_signature:
   before_script: []
   script:
     - cosign version
-    # Authentification au registry GitLab
+    # Authenticate to GitLab registry
     - echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - echo "Verifying signature for $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA..."
-    # Debug: afficher la cle publique (variable File = chemin du fichier)
+    # Debug: display the public key (File variable = file path)
     - cat "$COSIGN_PUBLIC_KEY"
-    # Verifier la signature
+    # Verify the signature
     - cosign verify --key "$COSIGN_PUBLIC_KEY" "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
     - echo "Signature verified successfully!"
-    # Verifier l'attestation SBOM
+    # Verify the SBOM attestation
     - cosign verify-attestation --key "$COSIGN_PUBLIC_KEY" --type cyclonedx "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" || echo "SBOM attestation verification skipped"
   rules:
     - if: $CI_COMMIT_BRANCH == "master"

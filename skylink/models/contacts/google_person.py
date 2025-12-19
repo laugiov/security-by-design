@@ -43,7 +43,7 @@ except ImportError:
 
 class GooglePerson(BaseModel):
     """
-    Sous-ensemble du schéma `Person` Google, contrôlé par `person_fields`.
+    Subset of Google `Person` schema, controlled by `person_fields`.
     """  # noqa: E501
 
     resource_name: Optional[StrictStr] = Field(default=None, alias="resourceName")
