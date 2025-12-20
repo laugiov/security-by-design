@@ -1,7 +1,7 @@
 """Database models for OAuth tokens storage."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, String, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -96,21 +96,15 @@ class OAuthToken(Base):
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: (
-            datetime.now(datetime.UTC) if hasattr(datetime, "UTC") else datetime.utcnow()
-        ),
+        default=lambda: datetime.now(timezone.utc),
         comment="Record creation timestamp (UTC)",
     )
 
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: (
-            datetime.now(datetime.UTC) if hasattr(datetime, "UTC") else datetime.utcnow()
-        ),
-        onupdate=lambda: (
-            datetime.now(datetime.UTC) if hasattr(datetime, "UTC") else datetime.utcnow()
-        ),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         comment="Record last update timestamp (UTC)",
     )
 

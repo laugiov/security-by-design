@@ -1,7 +1,7 @@
 """Tests for token storage module."""
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import UUID
 
@@ -40,7 +40,7 @@ def sample_tokens():
     return {
         "access_token": "ya29.a0AfB_byC...",
         "refresh_token": "1//0gHdtzPnWxCB4CgYIARAAGBASNwF-L9Ir...",
-        "expires_at": datetime.utcnow() + timedelta(hours=1),
+        "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
         "scopes": ["https://www.googleapis.com/auth/contacts.readonly"],
         "provider": "google",
     }
@@ -125,7 +125,7 @@ class TestTokenStorageSave:
         new_tokens = {
             **sample_tokens,
             "access_token": "ya29.NEW_TOKEN",
-            "expires_at": datetime.utcnow() + timedelta(hours=2),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=2),
         }
         await token_storage.save(sample_aircraft_id, new_tokens)
 
@@ -195,7 +195,7 @@ class TestTokenStorageIsExpired:
         # Token expires in 1 hour (future)
         tokens = {
             **sample_tokens,
-            "expires_at": datetime.utcnow() + timedelta(hours=1),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
         }
         await token_storage.save(sample_aircraft_id, tokens)
 
@@ -210,7 +210,7 @@ class TestTokenStorageIsExpired:
         # Token expired 1 hour ago (past)
         tokens = {
             **sample_tokens,
-            "expires_at": datetime.utcnow() - timedelta(hours=1),
+            "expires_at": datetime.now(timezone.utc) - timedelta(hours=1),
         }
         await token_storage.save(sample_aircraft_id, tokens)
 

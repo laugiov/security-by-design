@@ -1,6 +1,6 @@
 """Token storage management for OAuth tokens."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -100,9 +100,7 @@ class TokenStorage:
                 existing.expires_at = expires_at
                 existing.scopes = tokens.get("scopes", [])
                 existing.provider = tokens.get("provider", "google")
-                existing.updated_at = (
-                    datetime.now(datetime.UTC) if hasattr(datetime, "UTC") else datetime.utcnow()
-                )
+                existing.updated_at = datetime.now(timezone.utc)
             else:
                 # Create new record
                 new_token = OAuthToken(
@@ -176,8 +174,12 @@ class TokenStorage:
                 return None
 
             # Check if expired (with 1 minute buffer for clock skew)
-            now = datetime.now(datetime.UTC) if hasattr(datetime, "UTC") else datetime.utcnow()
-            return token_record.expires_at <= now
+            now = datetime.now(timezone.utc)
+            expires_at = token_record.expires_at
+            # Handle naive datetime from database
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            return expires_at <= now
 
         except SQLAlchemyError as e:
             raise TokenStorageError(f"Database error while checking expiration: {e}") from e
