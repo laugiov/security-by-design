@@ -91,7 +91,9 @@ class TokenStorage:
                 expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
 
             # Check if token already exists
-            existing = self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
+            existing = (
+                self.db.query(OAuthToken).filter(OAuthToken.aircraft_id == aircraft_id).first()
+            )
 
             if existing:
                 # Update existing record

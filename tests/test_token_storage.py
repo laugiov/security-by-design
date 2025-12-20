@@ -170,7 +170,9 @@ class TestTokenStorageDelete:
         assert tokens is None
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_aircraft_returns_false(self, token_storage, sample_aircraft_id):
+    async def test_delete_nonexistent_aircraft_returns_false(
+        self, token_storage, sample_aircraft_id
+    ):
         """Delete should return False if aircraft has no tokens."""
         result = await token_storage.delete(sample_aircraft_id)
         assert result is False

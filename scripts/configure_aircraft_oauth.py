@@ -124,9 +124,7 @@ def call_oauth_callback(
 
 def main():
     """Main script entry point."""
-    parser = argparse.ArgumentParser(
-        description="Configure Google OAuth for a SkyLink aircraft"
-    )
+    parser = argparse.ArgumentParser(description="Configure Google OAuth for a SkyLink aircraft")
     parser.add_argument(
         "--aircraft-id", help="Aircraft UUID (e.g.: 550e8400-e29b-41d4-a716-446655440000)"
     )

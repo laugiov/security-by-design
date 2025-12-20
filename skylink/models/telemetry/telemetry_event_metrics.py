@@ -21,21 +21,21 @@ from typing import Any, ClassVar, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr, field_validator
 from typing_extensions import Annotated
 
-from skylink.models.telemetry.telemetry_event_metrics_climate_control import (
-    TelemetryEventMetricsClimateControl,
-)
-from skylink.models.telemetry.telemetry_event_metrics_gps import TelemetryEventMetricsGps
-from skylink.models.telemetry.telemetry_event_metrics_lights_status import (
-    TelemetryEventMetricsLightsStatus,
-)
 from skylink.models.telemetry.telemetry_event_metrics_cabin_pressure import (
     TelemetryEventMetricsCabinPressure,
+)
+from skylink.models.telemetry.telemetry_event_metrics_climate_control import (
+    TelemetryEventMetricsClimateControl,
 )
 from skylink.models.telemetry.telemetry_event_metrics_engine_status import (
     TelemetryEventMetricsEngineStatus,
 )
 from skylink.models.telemetry.telemetry_event_metrics_flight_controls import (
     TelemetryEventMetricsFlightControls,
+)
+from skylink.models.telemetry.telemetry_event_metrics_gps import TelemetryEventMetricsGps
+from skylink.models.telemetry.telemetry_event_metrics_lights_status import (
+    TelemetryEventMetricsLightsStatus,
 )
 
 try:

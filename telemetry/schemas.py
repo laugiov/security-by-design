@@ -113,7 +113,9 @@ class Metrics(BaseModel):
         None,
         description="Airbag system status (armed, deployed, fault)",
     )
-    flight_controls: FlightControlsInfo | None = Field(None, description="Flight controls information")
+    flight_controls: FlightControlsInfo | None = Field(
+        None, description="Flight controls information"
+    )
     lights_status: LightsStatus | None = Field(None, description="Lights status")
     climate_control: ClimateControl | None = Field(None, description="Air conditioning / heating")
     cabin_pressure: CabinPressure | None = Field(None, description="Seatbelt fastening")

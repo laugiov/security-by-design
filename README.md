@@ -2,7 +2,7 @@
 
 > A **microservices** platform demonstrating **Security by Design** principles for connected aviation telemetry systems.
 
-[![CI](https://github.com/YOUR_ORG/skylink/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/skylink/actions/workflows/ci.yml)
+[![CI](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml/badge.svg)](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#technology-stack)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120-009688?logo=fastapi&logoColor=white)](#technology-stack)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
