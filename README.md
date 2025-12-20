@@ -2,6 +2,7 @@
 
 > A **microservices** platform demonstrating **Security by Design** principles for connected aviation telemetry systems.
 
+[![CI](https://github.com/YOUR_ORG/skylink/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/skylink/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#technology-stack)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120-009688?logo=fastapi&logoColor=white)](#technology-stack)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
@@ -115,7 +116,9 @@ Permissions-Policy: geolocation=(), microphone=(), camera=()
 
 ## CI/CD Security Pipeline
 
-GitLab CI pipeline with security gates at every stage ([.gitlab-ci.yml](.gitlab-ci.yml)):
+CI/CD pipeline with security gates at every stage:
+- **GitHub Actions**: [.github/workflows/ci.yml](.github/workflows/ci.yml) — See [setup guide](docs/GITHUB_CI_SETUP.md)
+- **GitLab CI**: [.gitlab-ci.yml](.gitlab-ci.yml) — See [setup guide](docs/GITLAB_CI_SETUP.md)
 
 ```
 ┌───────┐   ┌───────┐   ┌───────┐   ┌───────┐   ┌───────┐   ┌───────────────┐   ┌───────┐
@@ -130,7 +133,7 @@ GitLab CI pipeline with security gates at every stage ([.gitlab-ci.yml](.gitlab-
 | **Ruff** | Python linting | lint |
 | **Black** | Code formatting | lint |
 | **Bandit** | SAST (security linting) | lint |
-| **pytest** | Unit tests (323 tests, 82% coverage) | test |
+| **pytest** | Unit tests (305 tests, 81% coverage) | test |
 | **Trivy** | Container vulnerability scanning | scan |
 | **pip-audit** | Python dependency SCA | scan |
 | **Gitleaks** | Secret detection | scan |
@@ -269,18 +272,25 @@ skylink/
 ├── tests/                   # Test suite
 ├── docs/                    # Documentation
 │   ├── DEMO.md              # Demo guide
-│   └── TECHNICAL_DOCUMENTATION.md  # Technical documentation
+│   ├── TECHNICAL_DOCUMENTATION.md  # Technical documentation
+│   ├── GITHUB_CI_SETUP.md   # GitHub Actions setup guide
+│   └── GITLAB_CI_SETUP.md   # GitLab CI/CD setup guide
 ├── Dockerfile.*             # Multi-stage Dockerfiles (non-root user)
 ├── docker-compose.yml       # Orchestration
-└── .gitlab-ci.yml           # CI/CD pipeline
+├── .gitlab-ci.yml           # GitLab CI/CD pipeline
+└── .github/workflows/ci.yml # GitHub Actions pipeline
 ```
 
 ---
 
 ## Documentation
 
-- [docs/DEMO.md](docs/DEMO.md) — Step-by-step demonstration walkthrough
-- [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) — Complete technical documentation (architecture, security, CI/CD, RRA compliance)
+| Document | Description |
+|----------|-------------|
+| [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
+| [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
+| [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
+| [docs/GITLAB_CI_SETUP.md](docs/GITLAB_CI_SETUP.md) | GitLab CI/CD setup guide (variables, registry, pipeline) |
 
 ---
 
@@ -311,7 +321,7 @@ make test
 poetry run pytest
 ```
 
-**323 tests** with **82% coverage** — covering authentication, rate limiting, input validation, idempotency, security headers, error handling, and service integration.
+**305 tests** with **81% coverage** — covering authentication, rate limiting, input validation, idempotency, security headers, error handling, and service integration.
 
 ---
 
