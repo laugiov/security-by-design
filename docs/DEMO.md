@@ -616,4 +616,15 @@ Jobs:
 
 ---
 
-**SkyLink Demonstration Guide** (with Supply Chain Security)
+## Security Documentation
+
+For a complete understanding of the security posture:
+
+| Document | Description |
+|----------|-------------|
+| [THREAT_MODEL.md](THREAT_MODEL.md) | STRIDE-based threat analysis covering 30+ threats |
+| [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) | Data flow diagrams with trust boundaries |
+| [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) | Complete technical documentation with RRA compliance |
+
+---
+
