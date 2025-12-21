@@ -6,6 +6,7 @@ This module provides rate limiting for the SkyLink API Gateway:
 
 Uses slowapi (based on limits library) for robust rate limiting.
 Includes Prometheus counter for rate limit exceeded events.
+Includes audit logging for security monitoring.
 """
 
 from fastapi import Request
@@ -14,6 +15,8 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse
+
+from skylink.audit import audit_logger
 
 # Prometheus counter for rate limit exceeded events
 rate_limit_exceeded_counter = Counter(
@@ -67,6 +70,7 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
 
     Returns a standardized error response matching the project's error format.
     Also increments the Prometheus counter for monitoring.
+    Logs audit event for security monitoring.
 
     Args:
         request: The incoming HTTP request
@@ -80,6 +84,22 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
         path=request.url.path,
         method=request.method,
     ).inc()
+
+    # Extract actor ID and trace ID for audit logging
+    actor_id = get_aircraft_id_from_request(request)
+    trace_id = getattr(request.state, "trace_id", None)
+    if not trace_id:
+        trace_id = request.headers.get("X-Trace-Id")
+    client_ip = request.client.host if request.client else None
+
+    # Audit: Log rate limit exceeded event
+    audit_logger.log_rate_limit_exceeded(
+        actor_id=actor_id,
+        ip_address=client_ip,
+        trace_id=trace_id,
+        endpoint=request.url.path,
+        limit=exc.detail,
+    )
 
     return JSONResponse(
         status_code=429,

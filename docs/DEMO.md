@@ -733,6 +733,114 @@ rm -rf /tmp/jwt_demo_keys /tmp/enc_demo_keys
 
 ---
 
+## Demo 12: Audit Logging
+
+> **Note**: Audit logs are automatically generated for all security-relevant events.
+
+### Step 12.1: View Real-Time Audit Logs
+
+```bash
+# Follow gateway logs and filter for AUDIT events
+docker compose logs -f gateway 2>&1 | grep "AUDIT:"
+```
+
+### Step 12.2: Generate Audit Events
+
+In another terminal, trigger some events:
+
+```bash
+# 1. Authentication success event
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"}' | jq -r '.access_token')
+
+# 2. Weather access event (rounds coordinates for privacy)
+curl -s "http://localhost:8000/weather/current?lat=48.8566&lon=2.3522" \
+  -H "Authorization: Bearer $TOKEN" > /dev/null
+
+# 3. Contacts access event
+curl -s "http://localhost:8000/contacts/?person_fields=names" \
+  -H "Authorization: Bearer $TOKEN" > /dev/null
+
+# 4. Rate limit exceeded event (run after Demo 3)
+for i in $(seq 1 70); do
+  curl -s "http://localhost:8000/weather/current?lat=48.8566&lon=2.3522" \
+    -H "Authorization: Bearer $TOKEN" > /dev/null
+done
+```
+
+### Step 12.3: Examine Audit Log Structure
+
+```bash
+# Get a single audit event and format it
+docker compose logs gateway 2>&1 | grep "AUDIT:" | head -1 | \
+  sed 's/.*AUDIT: //' | jq
+```
+
+**Expected output**:
+```json
+{
+  "timestamp": "2025-01-15T10:30:00.000000Z",
+  "event_id": "evt_abc123def456",
+  "event_type": "AUTH_SUCCESS",
+  "event_category": "authentication",
+  "severity": "info",
+  "service": "gateway",
+  "actor": {
+    "type": "aircraft",
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "ip": "172.18.0.1"
+  },
+  "action": "authenticate",
+  "outcome": "success",
+  "trace_id": "f6b40f74-bdd5-4865-9568-9cd2567eecf9",
+  "details": {
+    "method": "jwt_rs256"
+  }
+}
+```
+
+### Step 12.4: Filter by Event Type
+
+```bash
+# Authentication events only
+docker compose logs gateway 2>&1 | grep "AUDIT:" | grep "AUTH_"
+
+# Rate limit events only
+docker compose logs gateway 2>&1 | grep "AUDIT:" | grep "RATE_LIMIT"
+
+# Data access events only
+docker compose logs gateway 2>&1 | grep "AUDIT:" | grep -E "(WEATHER|CONTACTS|TELEMETRY)"
+```
+
+### Step 12.5: Verify No PII in Logs
+
+```bash
+# Search for potential PII patterns (should return nothing)
+docker compose logs gateway 2>&1 | grep "AUDIT:" | grep -E "@|Bearer|eyJ|PRIVATE"
+
+# If the above returns nothing, your logs are clean!
+echo "✓ No PII detected in audit logs"
+```
+
+### Audit Event Types
+
+| Event Type | Category | Severity | Trigger |
+|------------|----------|----------|---------|
+| `AUTH_SUCCESS` | authentication | info | Successful JWT token issuance |
+| `AUTH_FAILURE` | authentication | warning | Failed authentication attempt |
+| `RATE_LIMIT_EXCEEDED` | security | warning | Rate limit hit (429) |
+| `WEATHER_ACCESSED` | data | info | Weather endpoint access |
+| `CONTACTS_ACCESSED` | data | info | Contacts endpoint access |
+| `TELEMETRY_CREATED` | data | info | New telemetry event ingested |
+| `TELEMETRY_DUPLICATE` | data | info | Duplicate event (idempotent) |
+| `TELEMETRY_CONFLICT` | data | warning | Conflict detected (409) |
+| `MTLS_CN_MISMATCH` | security | error | Certificate CN ≠ JWT sub |
+
+See [AUDIT_LOGGING.md](AUDIT_LOGGING.md) for complete documentation.
+
+---
+
 ## Cleanup
 
 ```bash
@@ -820,6 +928,13 @@ Jobs:
 - [ ] Encryption key rotation works (`./scripts/rotate_encryption_key.sh --dry-run`)
 - [ ] Certificate renewal works (`./scripts/renew_certificates.sh --dry-run server`)
 
+### Audit Logging
+- [ ] Audit logs visible in gateway logs (`docker compose logs gateway | grep AUDIT`)
+- [ ] AUTH_SUCCESS events logged on token creation
+- [ ] WEATHER_ACCESSED events logged with rounded coordinates
+- [ ] RATE_LIMIT_EXCEEDED events logged on 429
+- [ ] No PII in audit logs (no emails, tokens, keys)
+
 ### Supply Chain Security (CI/CD)
 - [ ] Image signature verified (cosign verify)
 - [ ] SBOM attestation verified (cosign verify-attestation)
@@ -836,6 +951,7 @@ For a complete understanding of the security posture:
 | [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) | Data flow diagrams with trust boundaries |
 | [MONITORING.md](MONITORING.md) | Security monitoring with Prometheus and Grafana |
 | [KEY_MANAGEMENT.md](KEY_MANAGEMENT.md) | Key rotation procedures and cryptographic inventory |
+| [AUDIT_LOGGING.md](AUDIT_LOGGING.md) | Audit event logging, security event tracking |
 | [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) | Complete technical documentation with RRA compliance |
 
 ---

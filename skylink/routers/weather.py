@@ -5,6 +5,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from skylink.audit import audit_logger
 from skylink.auth import verify_jwt
 from skylink.models.weather.weather_data import WeatherData
 from skylink.rate_limit import RATE_LIMIT_PER_AIRCRAFT, limiter
@@ -17,6 +18,28 @@ router = APIRouter(
 # Weather service URL (from config or env)
 WEATHER_SERVICE_URL = "http://weather:8002"
 PROXY_TIMEOUT = 2.0  # 2 seconds timeout
+
+
+def _get_trace_id(request: Request) -> str | None:
+    """Extract trace ID from request state or headers."""
+    try:
+        trace_id = getattr(request.state, "trace_id", None)
+        if not trace_id:
+            trace_id = request.headers.get("X-Trace-Id")
+        return trace_id if isinstance(trace_id, str) else None
+    except Exception:
+        return None
+
+
+def _get_client_ip(request: Request) -> str | None:
+    """Extract client IP address from request."""
+    try:
+        if request.client and hasattr(request.client, "host"):
+            host = request.client.host
+            return host if isinstance(host, str) else None
+    except Exception:
+        pass
+    return None
 
 
 @router.get("/current", response_model=WeatherData)
@@ -47,6 +70,10 @@ async def get_current_weather(
     Raises:
         HTTPException: If weather service is unavailable or returns error
     """
+    aircraft_id = token.get("sub")
+    trace_id = _get_trace_id(request)
+    client_ip = _get_client_ip(request)
+
     try:
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT) as client:
             params = {"lat": lat, "lon": lon}
@@ -61,6 +88,15 @@ async def get_current_weather(
                     status_code=response.status_code,
                     detail=f"Weather service error: {response.text}",
                 )
+
+            # Audit: Log weather data access
+            audit_logger.log_weather_accessed(
+                actor_id=aircraft_id,
+                lat=lat,
+                lon=lon,
+                ip_address=client_ip,
+                trace_id=trace_id,
+            )
 
             return response.json()
 

@@ -1,8 +1,9 @@
 """Contacts router - Gateway proxy to Contacts microservice."""
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from skylink.audit import audit_logger
 from skylink.auth import verify_jwt
 
 router = APIRouter(
@@ -15,8 +16,31 @@ CONTACTS_SERVICE_URL = "http://contacts:8003"
 PROXY_TIMEOUT = 2.0  # 2 seconds timeout
 
 
+def _get_trace_id(request: Request) -> str | None:
+    """Extract trace ID from request state or headers."""
+    try:
+        trace_id = getattr(request.state, "trace_id", None)
+        if not trace_id:
+            trace_id = request.headers.get("X-Trace-Id")
+        return trace_id if isinstance(trace_id, str) else None
+    except Exception:
+        return None
+
+
+def _get_client_ip(request: Request) -> str | None:
+    """Extract client IP address from request."""
+    try:
+        if request.client and hasattr(request.client, "host"):
+            host = request.client.host
+            return host if isinstance(host, str) else None
+    except Exception:
+        pass
+    return None
+
+
 @router.get("/")
 async def list_contacts(
+    request: Request,
     person_fields: str = Query(
         ..., description="Google People field mask", examples=["names,emailAddresses,phoneNumbers"]
     ),
@@ -30,6 +54,7 @@ async def list_contacts(
     In MVP demo mode, it returns static fixtures.
 
     Args:
+        request: FastAPI request object
         person_fields: Google People API field mask (required)
         page: Page number (1-indexed)
         size: Items per page (1-100)
@@ -43,6 +68,8 @@ async def list_contacts(
     """
     # Extract aircraft_id from JWT (claim "sub")
     aircraft_id = token.get("sub")
+    trace_id = _get_trace_id(request)
+    client_ip = _get_client_ip(request)
 
     try:
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT) as client:
@@ -59,7 +86,18 @@ async def list_contacts(
                     detail=f"Contacts service error: {response.text}",
                 )
 
-            return response.json()
+            result = response.json()
+
+            # Audit: Log contacts access (PII data access)
+            items = result.get("items", [])
+            audit_logger.log_contacts_accessed(
+                actor_id=aircraft_id,
+                count=len(items),
+                ip_address=client_ip,
+                trace_id=trace_id,
+            )
+
+            return result
 
     except httpx.TimeoutException as e:
         raise HTTPException(

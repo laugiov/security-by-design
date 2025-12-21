@@ -3,9 +3,10 @@
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from httpx import AsyncClient
 
+from skylink.audit import audit_logger
 from skylink.auth import verify_jwt
 
 # Import telemetry models
@@ -52,11 +53,34 @@ async def obtain_telemetry_token(request: TelemetryObtainTokenRequest):
     return {"access_token": "mock_token", "token_type": "Bearer", "expires_in": 3600}
 
 
+def _get_trace_id(request: Request) -> str | None:
+    """Extract trace ID from request state or headers."""
+    try:
+        trace_id = getattr(request.state, "trace_id", None)
+        if not trace_id:
+            trace_id = request.headers.get("X-Trace-Id")
+        return trace_id if isinstance(trace_id, str) else None
+    except Exception:
+        return None
+
+
+def _get_client_ip(request: Request) -> str | None:
+    """Extract client IP address from request."""
+    try:
+        if request.client and hasattr(request.client, "host"):
+            host = request.client.host
+            return host if isinstance(host, str) else None
+    except Exception:
+        pass
+    return None
+
+
 @router.post(
     "/ingest",
     status_code=status.HTTP_201_CREATED,
 )
 async def ingest_telemetry(
+    request: Request,
     event: TelemetryEvent,
     response: Response,
     claims: dict = Depends(verify_jwt),
@@ -68,6 +92,7 @@ async def ingest_telemetry(
     Requires JWT authentication.
 
     Args:
+        request: FastAPI request object
         event: Telemetry event data from aircraft
         response: FastAPI response object to set status code
         claims: JWT claims from verify_jwt dependency
@@ -79,6 +104,12 @@ async def ingest_telemetry(
     Raises:
         HTTPException: 504 on timeout, 502 on service unavailable
     """
+    trace_id = _get_trace_id(request)
+    client_ip = _get_client_ip(request)
+    actor_id = claims.get("sub", "unknown")
+    # Use getattr for safety with model_construct() in tests
+    event_id = str(getattr(event, "event_id", "unknown"))
+
     try:
         async with AsyncClient(timeout=PROXY_TIMEOUT) as client:
             # Forward the original Authorization header to the telemetry service
@@ -90,6 +121,30 @@ async def ingest_telemetry(
 
             # Propagate the status code from the telemetry service
             response.status_code = upstream_response.status_code
+
+            # Audit: Log telemetry event based on response status
+            if upstream_response.status_code == 201:
+                audit_logger.log_telemetry_created(
+                    actor_id=actor_id,
+                    event_id=event_id,
+                    ip_address=client_ip,
+                    trace_id=trace_id,
+                )
+            elif upstream_response.status_code == 200:
+                audit_logger.log_telemetry_duplicate(
+                    actor_id=actor_id,
+                    event_id=event_id,
+                    ip_address=client_ip,
+                    trace_id=trace_id,
+                )
+            elif upstream_response.status_code == 409:
+                audit_logger.log_telemetry_conflict(
+                    actor_id=actor_id,
+                    event_id=event_id,
+                    ip_address=client_ip,
+                    trace_id=trace_id,
+                )
+
             return upstream_response.json()
 
     except httpx.TimeoutException as e:
