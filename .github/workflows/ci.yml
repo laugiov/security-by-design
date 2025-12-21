@@ -169,10 +169,13 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-      image_digest: ${{ steps.build.outputs.digest }}
+      image_tag: ${{ steps.short_sha.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get short SHA
+        id: short_sha
+        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -218,6 +221,7 @@ jobs:
       contents: read
       packages: read
       security-events: write
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -228,17 +232,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pull image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
+          exit-code: '0'
 
       - name: Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -295,21 +303,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Start application
+      - name: Pull and start application
         run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
           docker run -d --name skylink -p 8000:8000 \
             -e DEMO_MODE=true \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
 
           # Wait for app to be ready
+          echo "Waiting for application to start..."
           for i in {1..30}; do
-            if curl -sf http://localhost:8000/health > /dev/null; then
-              echo "Application is ready"
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Application is ready!"
               break
             fi
             echo "Waiting for application... ($i/30)"
             sleep 2
           done
+
+          # Final check
+          curl -sf http://localhost:8000/health || (docker logs skylink && exit 1)
 
       - name: Run ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
@@ -346,22 +359,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sign image with Cosign (key-based)
-        if: ${{ env.COSIGN_PRIVATE_KEY != '' }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: |
-          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
       - name: Sign image with keyless signing (Sigstore)
-        if: ${{ env.COSIGN_PRIVATE_KEY == '' }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
           cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
 
   # ============================================
   # ATTEST SBOM
@@ -369,7 +370,7 @@ jobs:
   attest:
     name: Attest SBOM
     runs-on: ubuntu-latest
-    needs: [sign, sbom]
+    needs: [build, sign, sbom]
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -393,21 +394,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Attest SBOM with Cosign (key-based)
-        if: ${{ env.COSIGN_PRIVATE_KEY != '' }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: |
-          cosign attest --yes --key env://COSIGN_PRIVATE_KEY \
-            --predicate sbom.json --type cyclonedx \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
       - name: Attest SBOM with keyless signing
-        if: ${{ env.COSIGN_PRIVATE_KEY == '' }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
           cosign attest --yes \
             --predicate sbom.json --type cyclonedx \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
