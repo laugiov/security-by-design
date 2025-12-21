@@ -341,6 +341,49 @@ A detailed security architecture with Data Flow Diagrams is available in [SECURI
 - **Cryptographic Inventory**: Algorithms, key sizes, and rotation policies
 - **Network Security**: Docker network topology and policies
 
+### 7.3 Security Monitoring
+
+A complete monitoring guide is available in [MONITORING.md](MONITORING.md), which includes:
+
+- **Prometheus Configuration**: Scrape targets and intervals for all services
+- **Alert Rules**: 10+ security alerts (auth failures, rate limiting, errors, availability)
+- **Grafana Dashboard**: Pre-configured security dashboard with 11 panels
+- **Metrics Reference**: HTTP metrics, security queries, and operational procedures
+- **Troubleshooting**: Common issues and solutions
+
+**Quick Start**:
+```bash
+# Start monitoring stack
+docker compose --profile monitoring up -d
+
+# Access Grafana: http://localhost:3000 (admin/admin)
+# Access Prometheus: http://localhost:9090
+```
+
+### 7.4 Key Management
+
+A complete key management guide is available in [KEY_MANAGEMENT.md](KEY_MANAGEMENT.md), which includes:
+
+- **Cryptographic Inventory**: All keys with algorithms, sizes, and rotation periods
+- **Key Generation**: Procedures for JWT, encryption, and mTLS keys
+- **Key Storage**: Development, CI/CD, and production storage options
+- **Rotation Procedures**: Zero-downtime JWT rotation, encryption key versioning
+- **Emergency Procedures**: Key compromise response and emergency rotation
+- **Compliance**: PCI-DSS, SOC 2, NIST 800-57 alignment
+
+**Key Rotation Scripts**:
+```bash
+# JWT Key Rotation
+./scripts/rotate_jwt_keys.sh --env-format
+
+# Encryption Key Rotation
+./scripts/rotate_encryption_key.sh
+
+# Certificate Renewal
+./scripts/renew_certificates.sh server
+./scripts/renew_certificates.sh client aircraft-001
+```
+
 ---
 
 ## 8. RRA Compliance (Rapid Risk Assessment)

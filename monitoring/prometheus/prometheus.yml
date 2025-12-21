@@ -1,0 +1,59 @@
+# Prometheus Configuration for SkyLink Security Monitoring
+# https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'skylink-monitor'
+
+# Alertmanager configuration (optional - for production)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load alert rules
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+
+  # SkyLink API Gateway
+  - job_name: 'skylink-gateway'
+    static_configs:
+      - targets: ['gateway:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # SkyLink Telemetry Service
+  - job_name: 'skylink-telemetry'
+    static_configs:
+      - targets: ['telemetry:8001']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # SkyLink Weather Service
+  - job_name: 'skylink-weather'
+    static_configs:
+      - targets: ['weather:8002']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # SkyLink Contacts Service
+  - job_name: 'skylink-contacts'
+    static_configs:
+      - targets: ['contacts:8003']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s

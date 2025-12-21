@@ -1,0 +1,164 @@
+# SkyLink Security Alert Rules
+# https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+
+groups:
+  - name: security_alerts
+    rules:
+      # Authentication Alerts
+      - alert: HighAuthFailureRate
+        expr: sum(rate(http_requests_total{status="401"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          category: authentication
+        annotations:
+          summary: "High authentication failure rate detected"
+          description: "Authentication failures: {{ $value | printf \"%.2f\" }}/s over 5 minutes"
+          runbook_url: "https://github.com/skylink/runbooks/auth-failures"
+
+      - alert: SustainedAuthFailures
+        expr: sum(rate(http_requests_total{status="401"}[15m])) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          category: authentication
+        annotations:
+          summary: "Sustained authentication failures - possible brute force attack"
+          description: "Authentication failures sustained at {{ $value | printf \"%.2f\" }}/s for 10+ minutes"
+
+      # mTLS Alerts
+      - alert: mTLSValidationFailures
+        expr: sum(rate(http_requests_total{status="403"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: mtls
+        annotations:
+          summary: "mTLS validation failures detected"
+          description: "Forbidden (403) responses indicating mTLS CN != JWT sub validation failures"
+
+      # Rate Limiting Alerts
+      - alert: RateLimitAbuse
+        expr: sum(rate(http_requests_total{status="429"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: rate_limit
+        annotations:
+          summary: "Sustained rate limit abuse detected"
+          description: "Rate limit (429) responses: {{ $value | printf \"%.2f\" }}/s over 5 minutes"
+
+      - alert: RateLimitFlood
+        expr: sum(rate(http_requests_total{status="429"}[1m])) > 10
+        for: 2m
+        labels:
+          severity: critical
+          category: rate_limit
+        annotations:
+          summary: "Possible DDoS or API flood attack"
+          description: "Rate limit (429) responses: {{ $value | printf \"%.2f\" }}/s - immediate investigation required"
+
+      # Error Rate Alerts
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Error rate exceeds 5%"
+          description: "Server error rate is {{ $value | printf \"%.2f\" }}% over 5 minutes"
+
+      - alert: HighClientErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"4.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High client error rate (4xx)"
+          description: "Client error rate is {{ $value | printf \"%.2f\" }}% - possible scanning or malformed requests"
+
+      # Latency Alerts
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High request latency (p99 > 2s)"
+          description: "99th percentile latency is {{ $value | printf \"%.2f\" }}s"
+
+      - alert: CriticalRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 2m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "Critical request latency (p95 > 5s)"
+          description: "95th percentile latency is {{ $value | printf \"%.2f\" }}s - possible system overload"
+
+  - name: service_health
+    rules:
+      # Service Availability
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been unreachable for more than 1 minute"
+
+      - alert: ServiceUnstable
+        expr: avg_over_time(up[5m]) < 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is unstable"
+          description: "{{ $labels.job }} uptime is {{ $value | printf \"%.2f\" }}% over 5 minutes"
+
+      # No Traffic Alerts
+      - alert: NoTrafficReceived
+        expr: sum(rate(http_requests_total[5m])) == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "No traffic received for 10 minutes"
+          description: "No HTTP requests have been processed in the last 10 minutes"
+
+  - name: telemetry_security
+    rules:
+      # Telemetry Specific Alerts
+      - alert: HighIdempotencyConflicts
+        expr: sum(rate(http_requests_total{status="409", handler="/telemetry/ingest"}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: telemetry
+        annotations:
+          summary: "High idempotency conflict rate"
+          description: "Telemetry conflicts (409): {{ $value | printf \"%.2f\" }}/s - possible replay attack or client misconfiguration"
+
+      - alert: TelemetryIngestionSpike
+        expr: sum(rate(http_requests_total{handler="/telemetry/ingest", status="201"}[1m])) > 100
+        for: 2m
+        labels:
+          severity: info
+          category: telemetry
+        annotations:
+          summary: "Telemetry ingestion spike detected"
+          description: "Telemetry ingestion rate: {{ $value | printf \"%.0f\" }} events/s"

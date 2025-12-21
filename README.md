@@ -296,6 +296,8 @@ skylink/
 |----------|-------------|
 | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | STRIDE-based threat analysis and risk assessment |
 | [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) | Data flow diagrams, trust boundaries, security controls |
+| [docs/MONITORING.md](docs/MONITORING.md) | Security monitoring with Prometheus and Grafana |
+| [docs/KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) | Cryptographic key management, rotation procedures, compliance |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
