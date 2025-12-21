@@ -314,11 +314,40 @@ Endpoint: `GET /metrics`
 
 ---
 
-## 7. RRA Compliance (Rapid Risk Assessment)
+## 7. Security Documentation
+
+### 7.1 Threat Model
+
+A comprehensive STRIDE-based threat analysis is available in [THREAT_MODEL.md](THREAT_MODEL.md), which includes:
+
+- **Service Description**: Architecture and component responsibilities
+- **Data Dictionary**: Classification of all data types (Internal, Confidential, Restricted)
+- **Threat Actors**: External (nation-state, cybercriminals), internal (malicious insider), supply chain
+- **STRIDE Analysis**: 30+ threats across 6 categories with mitigations
+- **Risk Matrix**: Impact × Likelihood assessment
+- **Threat Scenarios**: 5 detailed scenarios (OAuth leak, mTLS bypass, supply chain, DDoS, replay)
+- **Gap Analysis**: Current state vs target state with remediation roadmap
+
+### 7.2 Security Architecture
+
+A detailed security architecture with Data Flow Diagrams is available in [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md), which includes:
+
+- **System Context Diagram**: Level 0 overview of external actors and platform
+- **Trust Boundaries**: 4 boundaries (Internet→Gateway, Gateway→Services, Services→External, Services→DB)
+- **Data Flow Diagrams**: Level 1 DFDs for authentication, telemetry, weather, and OAuth flows
+- **Security Controls by Layer**: 16 controls mapped to transport, network, application, and data layers
+- **Data Classification Matrix**: Handling rules for each data type
+- **Attack Surface Analysis**: Exposed endpoints and risk mitigation
+- **Cryptographic Inventory**: Algorithms, key sizes, and rotation policies
+- **Network Security**: Docker network topology and policies
+
+---
+
+## 8. RRA Compliance (Rapid Risk Assessment)
 
 This section details the project's compliance with recommendations from the **SkyLink-RRA.pdf** document (SkyLink Risk Assessment).
 
-### 7.1 RRA Recommendations and Implementation
+### 8.1 RRA Recommendations and Implementation
 
 | Impact | RRA Recommendation | Status | Implementation |
 |--------|-------------------|--------|----------------|
@@ -330,7 +359,7 @@ This section details the project's compliance with recommendations from the **Sk
 | **HIGH** | PII-free logs, tracing, metrics | ✅ Done | JSON logging with trace_id, `/metrics` Prometheus, PII-free logs |
 | **HIGH** | CI/CD supply chain (SBOM, SCA, SAST/DAST) | ✅ Done | GitLab pipeline: bandit, trivy, cyclonedx-bom, ZAP DAST |
 
-### 7.2 Threat Scenarios and Controls
+### 8.2 Threat Scenarios and Controls
 
 | Scenario (RRA) | Impact | Implemented Control | Evidence |
 |----------------|--------|---------------------|----------|
@@ -343,7 +372,7 @@ This section details the project's compliance with recommendations from the **Sk
 | **Vendor quota/outage** | MEDIUM | Demo mode fixtures (Weather), targeted circuit-breaker | Weather Service demo mode |
 | **CI/CD incidents** | MAXIMUM | Multi-stage pipeline, automated tests, health checks | 323 tests, 82% coverage |
 
-### 7.3 Data Dictionary and Protection
+### 8.3 Data Dictionary and Protection
 
 | Data (RRA) | Classification | Implemented Control |
 |------------|----------------|---------------------|
@@ -355,7 +384,7 @@ This section details the project's compliance with recommendations from the **Sk
 | Logs (requests, metrics) | Restricted | **PII-free JSON logs**, trace_id only |
 | Network metadata | Internal | Not logged (no IP/user-agent in logs) |
 
-### 7.4 Risk Matrix and Evidence
+### 8.4 Risk Matrix and Evidence
 
 | Risk (RRA) | Control | File/Test | Status |
 |------------|---------|-----------|--------|
@@ -367,7 +396,7 @@ This section details the project's compliance with recommendations from the **Sk
 | Aircraft impersonation | mTLS + cross-validation CN<->JWT | `tests/test_mtls*.py` | ✅ |
 | Injection / XSS | Strict schemas + Pydantic | `tests/test_error_handlers.py` | ✅ |
 
-### 7.5 Targeted Elements (Non-MVP)
+### 8.5 Targeted Elements (Non-MVP)
 
 | RRA Element | MVP Status | Production Target |
 |-------------|------------|-------------------|
@@ -376,7 +405,7 @@ This section details the project's compliance with recommendations from the **Sk
 | SLSA attestation >= L3 | SBOM generated | cosign + provenance attestation |
 | Vendor circuit-breaker | Demo mode | Resilience4j / Hystrix pattern |
 
-### 7.6 Note on Secrets Management (MVP)
+### 8.6 Note on Secrets Management (MVP)
 
 **RRA Context**: The recommendation "Manage secrets with KMS/Vault" aims to protect cryptographic secrets (RSA keys, OAuth tokens) against leaks and unauthorized access.
 
@@ -424,9 +453,9 @@ For production, the architecture allows transparent migration to HashiCorp Vault
 
 ---
 
-## 8. Technical Specifications
+## 9. Technical Specifications
 
-### 8.1 Technology Stack
+### 9.1 Technology Stack
 
 | Component | Technology | Version |
 |-----------|------------|---------|
@@ -441,7 +470,7 @@ For production, the architecture allows transparent migration to HashiCorp Vault
 | Containers | Docker | 24+ |
 | CI/CD | GitLab CI | - |
 
-### 8.2 Contract-First (OpenAPI)
+### 9.2 Contract-First (OpenAPI)
 
 Specifications in `openapi/*.yaml`:
 - `common.yaml`: Shared schemas (Error, Pagination)
@@ -457,9 +486,9 @@ Specifications in `openapi/*.yaml`:
 
 ---
 
-## 9. Appendices
+## 10. Appendices
 
-### 9.1 Project Structure
+### 10.1 Project Structure
 
 ```
 SkyLink/
@@ -489,7 +518,7 @@ SkyLink/
 +-- .gitlab-ci.yml           # CI/CD pipeline
 ```
 
-### 9.2 API Endpoints
+### 10.2 API Endpoints
 
 | Method | Endpoint | Service | Description |
 |--------|----------|---------|-------------|
@@ -503,7 +532,7 @@ SkyLink/
 | GET | /contacts/ | Gateway | List contacts |
 | GET | /contacts/health | Contacts | Health check |
 
-### 9.3 Standard HTTP Codes
+### 10.3 Standard HTTP Codes
 
 | Code | Meaning | Usage |
 |------|---------|-------|

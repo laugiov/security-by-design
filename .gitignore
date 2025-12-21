@@ -58,8 +58,9 @@ cosign-keys/
 .DS_Store
 Thumbs.db
 
-# local files
+# Local development files (internal planning, specs, progress tracking)
 local/*
+.local/
 
 # SQLite databases
 *.db

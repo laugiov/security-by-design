@@ -294,6 +294,8 @@ skylink/
 
 | Document | Description |
 |----------|-------------|
+| [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | STRIDE-based threat analysis and risk assessment |
+| [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) | Data flow diagrams, trust boundaries, security controls |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
@@ -334,7 +336,7 @@ poetry run pytest
 
 ## Security Controls Implemented
 
-- [x] **Threat Modeling** — RRA document in `/docs/`
+- [x] **Threat Modeling** — STRIDE analysis in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [x] **Strict Input Validation** — Pydantic `extra="forbid"`, reject unknown fields
 - [x] **JWT RS256 Authentication** — Short TTL (15 min), audience validation
 - [x] **mTLS Cross-Validation** — Certificate CN must match JWT subject
