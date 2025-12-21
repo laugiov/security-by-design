@@ -33,9 +33,7 @@ class TestJWTAlgorithm:
         3. Prevents algorithm confusion attacks
         """
         header = jwt.get_unverified_header(auth_token)
-        assert header["alg"] == "RS256", (
-            f"JWT must use RS256, not {header['alg']}"
-        )
+        assert header["alg"] == "RS256", f"JWT must use RS256, not {header['alg']}"
 
     def test_jwt_has_type_claim(self, auth_token: str):
         """JWT header should specify type as JWT."""
@@ -44,9 +42,7 @@ class TestJWTAlgorithm:
 
     def test_configured_algorithm_is_rs256(self):
         """Application configuration must specify RS256."""
-        assert settings.jwt_algorithm == "RS256", (
-            "JWT algorithm configuration must be RS256"
-        )
+        assert settings.jwt_algorithm == "RS256", "JWT algorithm configuration must be RS256"
 
 
 class TestKeyStrength:
@@ -60,8 +56,7 @@ class TestKeyStrength:
         """
         key_size = jwt_public_key.key_size
         assert key_size >= 2048, (
-            f"RSA key size {key_size} bits is too small. "
-            "Minimum 2048 bits required."
+            f"RSA key size {key_size} bits is too small. " "Minimum 2048 bits required."
         )
 
     def test_rsa_key_recommended_3072_bits(self, jwt_public_key):
@@ -78,9 +73,7 @@ class TestKeyStrength:
 
     def test_public_key_is_rsa(self, jwt_public_key):
         """Public key must be an RSA key."""
-        assert isinstance(jwt_public_key, rsa.RSAPublicKey), (
-            "JWT public key must be RSA"
-        )
+        assert isinstance(jwt_public_key, rsa.RSAPublicKey), "JWT public key must be RSA"
 
 
 class TestTokenLifetime:
@@ -140,8 +133,7 @@ class TestTokenLifetime:
 
         # Allow 2 second tolerance for timing
         assert abs(lifetime_seconds - expected_seconds) <= 2, (
-            f"Token lifetime {lifetime_seconds}s doesn't match "
-            f"configured {expected_seconds}s"
+            f"Token lifetime {lifetime_seconds}s doesn't match " f"configured {expected_seconds}s"
         )
 
 
@@ -162,9 +154,9 @@ class TestTokenClaims:
         Prevents token reuse for other services.
         """
         payload = jwt.decode(auth_token, options={"verify_signature": False})
-        assert payload.get("aud") == "skylink", (
-            f"JWT audience should be 'skylink', got '{payload.get('aud')}'"
-        )
+        assert (
+            payload.get("aud") == "skylink"
+        ), f"JWT audience should be 'skylink', got '{payload.get('aud')}'"
 
     def test_jwt_has_subject(self, auth_token: str):
         """JWT must have subject (sub) claim.
@@ -185,9 +177,7 @@ class TestTokenClaims:
         sensitive_keys = ["password", "secret", "key", "api_key", "token"]
 
         for key in sensitive_keys:
-            assert key not in payload, (
-                f"JWT should not contain '{key}' claim"
-            )
+            assert key not in payload, f"JWT should not contain '{key}' claim"
 
 
 class TestCryptographicPractices:
@@ -229,19 +219,18 @@ class TestCryptographicPractices:
             key_size=2048,
         )
         # Get its public key in PEM format
-        wrong_public_key = different_key.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode()
+        wrong_public_key = (
+            different_key.public_key()
+            .public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            .decode()
+        )
 
         # Decoding with a different key should fail
         with pytest.raises(jwt.InvalidSignatureError):
-            jwt.decode(
-                auth_token,
-                wrong_public_key,
-                algorithms=["RS256"],
-                audience="skylink"
-            )
+            jwt.decode(auth_token, wrong_public_key, algorithms=["RS256"], audience="skylink")
 
     def test_private_key_not_in_token(self, auth_token: str):
         """Token should not contain any key material."""

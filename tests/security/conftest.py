@@ -104,9 +104,7 @@ def tampered_token(auth_token: str) -> str:
     payload = json.loads(base64.urlsafe_b64decode(payload_b64))
     payload["sub"] = "attacker-modified-subject"
 
-    new_payload_b64 = base64.urlsafe_b64encode(
-        json.dumps(payload).encode()
-    ).rstrip(b"=").decode()
+    new_payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
     # Return token with modified payload but original signature
     return f"{parts[0]}.{new_payload_b64}.{parts[2]}"
@@ -130,13 +128,9 @@ def none_algorithm_token() -> str:
         "exp": int(time.time()) + 3600,
     }
 
-    header_b64 = base64.urlsafe_b64encode(
-        json.dumps(header).encode()
-    ).rstrip(b"=").decode()
+    header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
 
-    payload_b64 = base64.urlsafe_b64encode(
-        json.dumps(payload).encode()
-    ).rstrip(b"=").decode()
+    payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
     # Token with empty signature
     return f"{header_b64}.{payload_b64}."

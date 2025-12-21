@@ -18,9 +18,7 @@ from fastapi.testclient import TestClient
 class TestCoordinateBoundaries:
     """Coordinate input boundary tests for weather endpoint."""
 
-    def test_latitude_must_be_within_range(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_latitude_must_be_within_range(self, client: TestClient, auth_headers: dict):
         """Latitude must be between -90 and 90 degrees."""
         invalid_latitudes = [
             (-91, "Below minimum"),
@@ -37,13 +35,12 @@ class TestCoordinateBoundaries:
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Latitude {lat} ({description}) should be rejected"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Latitude {lat} ({description}) should be rejected"
 
-    def test_latitude_edge_cases(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_latitude_edge_cases(self, client: TestClient, auth_headers: dict):
         """Latitude edge cases at exactly -90 and 90 should be valid."""
         valid_latitudes = [-90, 90, 0, -45, 45]
 
@@ -53,13 +50,9 @@ class TestCoordinateBoundaries:
                 headers=auth_headers,
             )
             # Should be accepted (200), timeout (504), or service unavailable (502)
-            assert response.status_code in [200, 502, 504], (
-                f"Latitude {lat} should be valid"
-            )
+            assert response.status_code in [200, 502, 504], f"Latitude {lat} should be valid"
 
-    def test_longitude_must_be_within_range(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_longitude_must_be_within_range(self, client: TestClient, auth_headers: dict):
         """Longitude must be between -180 and 180 degrees."""
         invalid_longitudes = [
             (-181, "Below minimum"),
@@ -74,13 +67,12 @@ class TestCoordinateBoundaries:
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Longitude {lon} ({description}) should be rejected"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Longitude {lon} ({description}) should be rejected"
 
-    def test_longitude_edge_cases(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_longitude_edge_cases(self, client: TestClient, auth_headers: dict):
         """Longitude edge cases at exactly -180 and 180 should be valid."""
         valid_longitudes = [-180, 180, 0, -90, 90]
 
@@ -90,17 +82,13 @@ class TestCoordinateBoundaries:
                 headers=auth_headers,
             )
             # Should be accepted (200), timeout (504), or service unavailable (502)
-            assert response.status_code in [200, 502, 504], (
-                f"Longitude {lon} should be valid"
-            )
+            assert response.status_code in [200, 502, 504], f"Longitude {lon} should be valid"
 
 
 class TestPaginationLimits:
     """Pagination parameter validation tests."""
 
-    def test_page_must_be_positive(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_page_must_be_positive(self, client: TestClient, auth_headers: dict):
         """Page number must be positive (>= 1)."""
         invalid_pages = [0, -1, -100]
 
@@ -110,13 +98,9 @@ class TestPaginationLimits:
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Page {page} should be rejected"
-            )
+            assert response.status_code in [400, 422], f"Page {page} should be rejected"
 
-    def test_size_has_maximum_limit(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_size_has_maximum_limit(self, client: TestClient, auth_headers: dict):
         """Page size should have a reasonable maximum limit."""
         # Try excessively large page sizes
         large_sizes = [101, 1000, 10000, 1000000]
@@ -131,15 +115,11 @@ class TestPaginationLimits:
                 # If accepted, verify returned items are limited
                 data = response.json()
                 items = data.get("items", [])
-                assert len(items) <= 100, (
-                    f"Size {size} returned too many items"
-                )
+                assert len(items) <= 100, f"Size {size} returned too many items"
             else:
                 assert response.status_code in [400, 422, 502, 504]
 
-    def test_size_must_be_positive(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_size_must_be_positive(self, client: TestClient, auth_headers: dict):
         """Page size must be positive (>= 1)."""
         invalid_sizes = [0, -1, -100]
 
@@ -149,17 +129,13 @@ class TestPaginationLimits:
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Size {size} should be rejected"
-            )
+            assert response.status_code in [400, 422], f"Size {size} should be rejected"
 
 
 class TestTypeValidation:
     """Input type validation tests."""
 
-    def test_coordinates_must_be_numeric(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_coordinates_must_be_numeric(self, client: TestClient, auth_headers: dict):
         """Coordinates must be valid numbers."""
         non_numeric = ["abc", "null", "undefined", "NaN", "Infinity", ""]
 
@@ -169,18 +145,20 @@ class TestTypeValidation:
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Non-numeric lat '{value}' should be rejected"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Non-numeric lat '{value}' should be rejected"
 
             response = client.get(
                 f"/weather/current?lat=48.8&lon={value}",
                 headers=auth_headers,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Non-numeric lon '{value}' should be rejected"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Non-numeric lon '{value}' should be rejected"
 
     def test_aircraft_id_must_be_uuid(self, client: TestClient):
         """Aircraft ID must be a valid UUID format."""
@@ -194,14 +172,12 @@ class TestTypeValidation:
         ]
 
         for invalid_id in invalid_uuids:
-            response = client.post(
-                "/auth/token",
-                json={"aircraft_id": invalid_id}
-            )
+            response = client.post("/auth/token", json={"aircraft_id": invalid_id})
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Invalid UUID '{invalid_id}' should be rejected"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Invalid UUID '{invalid_id}' should be rejected"
 
     def test_valid_uuid_formats(self, client: TestClient):
         """Valid UUID formats should be accepted."""
@@ -213,22 +189,15 @@ class TestTypeValidation:
         ]
 
         for valid_id in valid_uuids:
-            response = client.post(
-                "/auth/token",
-                json={"aircraft_id": valid_id}
-            )
+            response = client.post("/auth/token", json={"aircraft_id": valid_id})
             # Should be accepted (200) not validation error
-            assert response.status_code == 200, (
-                f"Valid UUID '{valid_id}' should be accepted"
-            )
+            assert response.status_code == 200, f"Valid UUID '{valid_id}' should be accepted"
 
 
 class TestMalformedInput:
     """Malformed input handling tests."""
 
-    def test_invalid_json_rejected(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_invalid_json_rejected(self, client: TestClient, auth_headers: dict):
         """Invalid JSON should return 400 or 422, not 500."""
         invalid_json_payloads = [
             b"not json at all",
@@ -251,13 +220,12 @@ class TestMalformedInput:
                 content=payload,
             )
             # API returns 400 for validation errors (custom handler)
-            assert response.status_code in [400, 422], (
-                f"Invalid JSON should return 400/422: {payload[:30]}"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Invalid JSON should return 400/422: {payload[:30]}"
 
-    def test_extra_fields_rejected(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_extra_fields_rejected(self, client: TestClient, auth_headers: dict):
         """Extra/unknown fields should be rejected (strict validation).
 
         SkyLink uses 'extra = forbid' on models.
@@ -267,7 +235,7 @@ class TestMalformedInput:
             json={
                 "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
                 "extra_field": "should_be_rejected",
-            }
+            },
         )
         # Should reject the extra field
         # API returns 400 for validation errors (custom handler)
@@ -275,10 +243,7 @@ class TestMalformedInput:
 
     def test_missing_required_fields(self, client: TestClient):
         """Missing required fields should return clear error."""
-        response = client.post(
-            "/auth/token",
-            json={}  # Missing aircraft_id
-        )
+        response = client.post("/auth/token", json={})  # Missing aircraft_id
         # API returns 400 for validation errors (custom handler)
         assert response.status_code in [400, 422]
 
@@ -287,20 +252,13 @@ class TestMalformedInput:
         error = response.json()
         assert "detail" in error or "error" in error
 
-    def test_null_values_handled(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_null_values_handled(self, client: TestClient, auth_headers: dict):
         """Null values in required fields should be rejected."""
-        response = client.post(
-            "/auth/token",
-            json={"aircraft_id": None}
-        )
+        response = client.post("/auth/token", json={"aircraft_id": None})
         # API returns 400 for validation errors (custom handler)
         assert response.status_code in [400, 422]
 
-    def test_very_long_strings_handled(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_very_long_strings_handled(self, client: TestClient, auth_headers: dict):
         """Very long string inputs should be handled gracefully."""
         # Use a reasonable length that won't exceed URL limits
         long_string = "A" * 5000  # 5KB string (within URL limits)
@@ -316,9 +274,7 @@ class TestMalformedInput:
 class TestPayloadSizeLimits:
     """Request payload size limit tests."""
 
-    def test_oversized_json_payload_rejected(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_oversized_json_payload_rejected(self, client: TestClient, auth_headers: dict):
         """Oversized JSON payloads should be rejected."""
         # Create a large payload (10MB)
         large_payload = {
@@ -326,9 +282,7 @@ class TestPayloadSizeLimits:
             "timestamp": "2025-12-21T12:00:00Z",
             "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
             "event_type": "position",
-            "payload": {
-                "data": "X" * (10 * 1024 * 1024)  # 10MB of data
-            }
+            "payload": {"data": "X" * (10 * 1024 * 1024)},  # 10MB of data
         }
 
         response = client.post(
@@ -340,9 +294,7 @@ class TestPayloadSizeLimits:
         # 413 (Payload Too Large) or 400/422 (Unprocessable Entity)
         assert response.status_code in [400, 413, 422]
 
-    def test_deeply_nested_json_handled(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_deeply_nested_json_handled(self, client: TestClient, auth_headers: dict):
         """Deeply nested JSON should be handled (potential DoS vector)."""
         # Create deeply nested structure
         nested = {"level": 0}
@@ -369,9 +321,7 @@ class TestPayloadSizeLimits:
 class TestSpecialCharacters:
     """Special character handling tests."""
 
-    def test_unicode_in_strings(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_unicode_in_strings(self, client: TestClient, auth_headers: dict):
         """Unicode characters should be handled properly."""
         unicode_strings = [
             "Hello World",  # ASCII
@@ -397,9 +347,7 @@ class TestSpecialCharacters:
             # 400 if IDOR protection rejects mismatched aircraft_id
             assert response.status_code in [200, 400, 403, 409, 502]
 
-    def test_null_bytes_handled(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_null_bytes_handled(self, client: TestClient, auth_headers: dict):
         """Null bytes in input should be handled safely."""
         # Null bytes can cause issues in some systems
         response = client.post(

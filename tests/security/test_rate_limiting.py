@@ -21,9 +21,7 @@ from fastapi.testclient import TestClient
 class TestRateLimitEnforcement:
     """Rate limit enforcement tests."""
 
-    def test_weather_endpoint_rate_limited(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_weather_endpoint_rate_limited(self, client: TestClient, auth_headers: dict):
         """Weather endpoint should enforce rate limits.
 
         Protects against excessive API usage.
@@ -50,9 +48,7 @@ class TestRateLimitEnforcement:
             f"Got: {successful} success, {rate_limited} rate-limited, {timeouts} timeouts"
         )
 
-    def test_rate_limit_returns_429(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_rate_limit_returns_429(self, client: TestClient, auth_headers: dict):
         """Rate limited requests should return 429 status code."""
         # Make many rapid requests to trigger rate limit
         for _ in range(150):
@@ -66,9 +62,7 @@ class TestRateLimitEnforcement:
 
         pytest.skip("Could not trigger rate limit - may need higher request count")
 
-    def test_rate_limit_includes_retry_after(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_rate_limit_includes_retry_after(self, client: TestClient, auth_headers: dict):
         """Rate limited responses should include Retry-After header.
 
         Tells clients when they can retry.
@@ -82,14 +76,13 @@ class TestRateLimitEnforcement:
             if response.status_code == 429:
                 # Check for Retry-After header
                 retry_after = response.headers.get(
-                    "Retry-After",
-                    response.headers.get("retry-after")
+                    "Retry-After", response.headers.get("retry-after")
                 )
                 if retry_after:
                     # Should be a valid number
-                    assert retry_after.isdigit() or float(retry_after), (
-                        f"Retry-After should be numeric: {retry_after}"
-                    )
+                    assert retry_after.isdigit() or float(
+                        retry_after
+                    ), f"Retry-After should be numeric: {retry_after}"
                     return
                 else:
                     pytest.skip("Rate limit hit but Retry-After header not set")
@@ -100,9 +93,7 @@ class TestRateLimitEnforcement:
 class TestRateLimitReset:
     """Rate limit reset behavior tests."""
 
-    def test_rate_limit_resets_after_window(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_rate_limit_resets_after_window(self, client: TestClient, auth_headers: dict):
         """Rate limit should reset after the time window.
 
         This test may be slow as it waits for reset.
@@ -133,9 +124,10 @@ class TestRateLimitReset:
             "/weather/current?lat=48.8&lon=2.3",
             headers=auth_headers,
         )
-        assert response.status_code in [200, 504], (
-            "Rate limit should have reset after Retry-After period"
-        )
+        assert response.status_code in [
+            200,
+            504,
+        ], "Rate limit should have reset after Retry-After period"
 
 
 class TestPerAircraftRateLimits:
@@ -170,17 +162,17 @@ class TestPerAircraftRateLimits:
         )
         # Should not be rate limited (or at least not 429 from A's limit)
         # 502 is acceptable if weather service is unavailable
-        assert response_b.status_code in [200, 502, 504], (
-            "Aircraft B should not be affected by Aircraft A's rate limit"
-        )
+        assert response_b.status_code in [
+            200,
+            502,
+            504,
+        ], "Aircraft B should not be affected by Aircraft A's rate limit"
 
 
 class TestRateLimitBypassAttempts:
     """Tests for rate limit bypass attempts."""
 
-    def test_rate_limit_not_bypassed_by_xff_header(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_rate_limit_not_bypassed_by_xff_header(self, client: TestClient, auth_headers: dict):
         """Rate limit should not be bypassed by X-Forwarded-For header.
 
         Attackers might try to spoof their IP address.
@@ -202,13 +194,13 @@ class TestRateLimitBypassAttempts:
             headers={
                 **auth_headers,
                 "X-Forwarded-For": "1.2.3.4",
-            }
+            },
         )
 
         # Should still be rate limited (key is aircraft_id, not IP)
-        assert bypass_response.status_code == 429, (
-            "Rate limit should not be bypassed by X-Forwarded-For header"
-        )
+        assert (
+            bypass_response.status_code == 429
+        ), "Rate limit should not be bypassed by X-Forwarded-For header"
 
     def test_rate_limit_not_bypassed_by_different_path_case(
         self, client: TestClient, auth_headers: dict
@@ -230,9 +222,7 @@ class TestRateLimitBypassAttempts:
 class TestConcurrentRequests:
     """Tests for concurrent request handling."""
 
-    def test_concurrent_requests_all_rate_limited(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_concurrent_requests_all_rate_limited(self, client: TestClient, auth_headers: dict):
         """Concurrent requests should all be properly rate limited.
 
         Race conditions in rate limiting could allow bypass.
@@ -265,17 +255,13 @@ class TestConcurrentRequests:
 
         # Verify we got expected status codes
         for status in responses:
-            assert status in [200, 429, 504], (
-                f"Unexpected status code: {status}"
-            )
+            assert status in [200, 429, 504], f"Unexpected status code: {status}"
 
 
 class TestErrorResponsesNotRateLimited:
     """Tests that error responses don't count against rate limits."""
 
-    def test_validation_errors_dont_count(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_validation_errors_dont_count(self, client: TestClient, auth_headers: dict):
         """Validation errors (422) should not count against rate limit.
 
         Prevents attackers from burning rate limit with invalid requests.

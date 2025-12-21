@@ -34,35 +34,23 @@ class TestEndpointAuthorization:
     ]
 
     @pytest.mark.parametrize("endpoint,name", PROTECTED_GET_ENDPOINTS)
-    def test_protected_get_requires_auth(
-        self, client: TestClient, endpoint: str, name: str
-    ):
+    def test_protected_get_requires_auth(self, client: TestClient, endpoint: str, name: str):
         """Protected GET endpoints must require authentication."""
         response = client.get(endpoint)
-        assert response.status_code == 401, (
-            f"{name} should require authentication"
-        )
+        assert response.status_code == 401, f"{name} should require authentication"
         assert "WWW-Authenticate" in response.headers
 
     @pytest.mark.parametrize("endpoint,name", PROTECTED_POST_ENDPOINTS)
-    def test_protected_post_requires_auth(
-        self, client: TestClient, endpoint: str, name: str
-    ):
+    def test_protected_post_requires_auth(self, client: TestClient, endpoint: str, name: str):
         """Protected POST endpoints must require authentication."""
         response = client.post(endpoint, json={})
-        assert response.status_code == 401, (
-            f"{name} should require authentication"
-        )
+        assert response.status_code == 401, f"{name} should require authentication"
 
     @pytest.mark.parametrize("endpoint,name", PUBLIC_ENDPOINTS)
-    def test_public_endpoints_accessible(
-        self, client: TestClient, endpoint: str, name: str
-    ):
+    def test_public_endpoints_accessible(self, client: TestClient, endpoint: str, name: str):
         """Public endpoints should be accessible without auth."""
         response = client.get(endpoint)
-        assert response.status_code in [200, 307], (
-            f"{name} should be accessible without auth"
-        )
+        assert response.status_code in [200, 307], f"{name} should be accessible without auth"
 
 
 class TestIDORVulnerabilities:
@@ -88,8 +76,8 @@ class TestIDORVulnerabilities:
                 "timestamp": "2025-12-21T12:00:00Z",
                 "aircraft_id": "other-aircraft-id-not-mine",  # Different ID
                 "event_type": "position",
-                "payload": {"lat": 48.8, "lon": 2.3}
-            }
+                "payload": {"lat": 48.8, "lon": 2.3},
+            },
         )
         # Should either:
         # 1. Accept (if no IDOR protection yet - current state)
@@ -99,9 +87,7 @@ class TestIDORVulnerabilities:
         # Important: not 500
         assert response.status_code in [200, 201, 400, 403, 409, 422, 502]
 
-    def test_sequential_id_enumeration_resistance(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_sequential_id_enumeration_resistance(self, client: TestClient, auth_headers: dict):
         """System should not reveal information through ID enumeration.
 
         Sequential IDs can reveal system information.
@@ -124,16 +110,16 @@ class TestIDORVulnerabilities:
                     "timestamp": "2025-12-21T12:00:00Z",
                     "aircraft_id": aircraft_id,
                     "event_type": "position",
-                    "payload": {}
-                }
+                    "payload": {},
+                },
             )
             responses.append(response.status_code)
 
         # All responses should be consistent (not leaking info about ID validity)
         # If 403 for one, should be 403 for all (or 200 for all if no check)
-        assert len(set(responses)) <= 2, (
-            "Inconsistent responses may leak information about valid IDs"
-        )
+        assert (
+            len(set(responses)) <= 2
+        ), "Inconsistent responses may leak information about valid IDs"
 
 
 class TestPathTraversal:
@@ -152,9 +138,7 @@ class TestPathTraversal:
         "\\..\\..\\windows\\system32\\config\\sam",
     ]
 
-    def test_contacts_person_fields_traversal(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_contacts_person_fields_traversal(self, client: TestClient, auth_headers: dict):
         """Person fields parameter should not allow path traversal."""
         for payload in self.PATH_TRAVERSAL_PAYLOADS:
             response = client.get(
@@ -164,9 +148,7 @@ class TestPathTraversal:
             # Should not return file contents or 500 error
             if response.status_code == 200:
                 # If 200, verify response doesn't contain file contents
-                assert "root:" not in response.text, (
-                    f"Path traversal may have succeeded: {payload}"
-                )
+                assert "root:" not in response.text, f"Path traversal may have succeeded: {payload}"
             else:
                 # Error response is acceptable
                 assert response.status_code in [400, 422, 502, 504]
@@ -210,17 +192,24 @@ class TestForcedBrowsing:
             response = client.get(path)
             # Should return 404 (not found) or 401/403 (forbidden)
             # Never 200 with sensitive content
-            assert response.status_code in [401, 403, 404, 405, 307], (
-                f"Admin path may be exposed: {path}"
-            )
+            assert response.status_code in [
+                401,
+                403,
+                404,
+                405,
+                307,
+            ], f"Admin path may be exposed: {path}"
 
     def test_sensitive_paths_not_exposed(self, client: TestClient):
         """Sensitive system paths should not be accessible."""
         for path in self.SENSITIVE_PATHS:
             response = client.get(path)
-            assert response.status_code in [401, 403, 404, 405], (
-                f"Sensitive path may be exposed: {path}"
-            )
+            assert response.status_code in [
+                401,
+                403,
+                404,
+                405,
+            ], f"Sensitive path may be exposed: {path}"
             if response.status_code == 200:
                 # If somehow 200, verify no sensitive content
                 text = response.text.lower()
@@ -246,13 +235,9 @@ class TestHTTPMethodRestriction:
 
         for method_name, method_func in methods:
             response = method_func("/auth/token")
-            assert response.status_code == 405, (
-                f"Auth token should not accept {method_name}"
-            )
+            assert response.status_code == 405, f"Auth token should not accept {method_name}"
 
-    def test_weather_only_accepts_get(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_weather_only_accepts_get(self, client: TestClient, auth_headers: dict):
         """Weather endpoint should only accept GET."""
         methods = [
             ("POST", client.post),
@@ -265,13 +250,9 @@ class TestHTTPMethodRestriction:
                 "/weather/current?lat=48.8&lon=2.3",
                 headers=auth_headers,
             )
-            assert response.status_code == 405, (
-                f"Weather should not accept {method_name}"
-            )
+            assert response.status_code == 405, f"Weather should not accept {method_name}"
 
-    def test_telemetry_only_accepts_post(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_telemetry_only_accepts_post(self, client: TestClient, auth_headers: dict):
         """Telemetry endpoint should only accept POST."""
         methods = [
             ("GET", lambda url: client.get(url, headers=auth_headers)),
@@ -281,9 +262,7 @@ class TestHTTPMethodRestriction:
 
         for method_name, method_func in methods:
             response = method_func("/telemetry/ingest")
-            assert response.status_code == 405, (
-                f"Telemetry should not accept {method_name}"
-            )
+            assert response.status_code == 405, f"Telemetry should not accept {method_name}"
 
 
 class TestHostHeaderInjection:
@@ -301,9 +280,6 @@ class TestHostHeaderInjection:
         ]
 
         for host in malicious_hosts:
-            response = client.get(
-                "/health",
-                headers={"Host": host}
-            )
+            response = client.get("/health", headers={"Host": host})
             # Should handle gracefully - either reject or ignore
             assert response.status_code in [200, 400, 421]

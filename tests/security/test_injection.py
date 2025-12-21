@@ -43,18 +43,14 @@ class TestSQLInjection:
         SQL injection payloads should be rejected with 422 (validation error).
         """
         for payload in self.SQLI_PAYLOADS:
-            response = client.post(
-                "/auth/token",
-                json={"aircraft_id": payload}
-            )
+            response = client.post("/auth/token", json={"aircraft_id": payload})
             # Must return validation error (400 or 422), not 500 (server error)
-            assert response.status_code in [400, 422], (
-                f"SQLi payload not properly rejected: {payload}"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"SQLi payload not properly rejected: {payload}"
 
-    def test_weather_coordinates_sqli(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_weather_coordinates_sqli(self, client: TestClient, auth_headers: dict):
         """Coordinate parameters should reject SQL injection.
 
         Latitude and longitude must be floats.
@@ -66,22 +62,16 @@ class TestSQLInjection:
                 f"/weather/current?lat={payload}&lon=2.3",
                 headers=auth_headers,
             )
-            assert response.status_code in [400, 422], (
-                f"SQLi in lat not rejected: {payload}"
-            )
+            assert response.status_code in [400, 422], f"SQLi in lat not rejected: {payload}"
 
             # Test longitude parameter
             response = client.get(
                 f"/weather/current?lat=48.8&lon={payload}",
                 headers=auth_headers,
             )
-            assert response.status_code in [400, 422], (
-                f"SQLi in lon not rejected: {payload}"
-            )
+            assert response.status_code in [400, 422], f"SQLi in lon not rejected: {payload}"
 
-    def test_contacts_page_param_sqli(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_contacts_page_param_sqli(self, client: TestClient, auth_headers: dict):
         """Pagination parameters should reject SQL injection."""
         for payload in self.SQLI_PAYLOADS:
             response = client.get(
@@ -89,9 +79,7 @@ class TestSQLInjection:
                 headers=auth_headers,
             )
             # Should return validation error (400 or 422), not 500 (server error)
-            assert response.status_code in [400, 422], (
-                f"SQLi in page param not rejected: {payload}"
-            )
+            assert response.status_code in [400, 422], f"SQLi in page param not rejected: {payload}"
 
 
 class TestCommandInjection:
@@ -118,18 +106,14 @@ class TestCommandInjection:
         UUID validation should prevent command injection payloads.
         """
         for payload in self.CMD_PAYLOADS:
-            response = client.post(
-                "/auth/token",
-                json={"aircraft_id": payload}
-            )
+            response = client.post("/auth/token", json={"aircraft_id": payload})
             # Must return validation error (400 or 422), never execute commands
-            assert response.status_code in [400, 422], (
-                f"Command injection payload not rejected: {payload}"
-            )
+            assert response.status_code in [
+                400,
+                422,
+            ], f"Command injection payload not rejected: {payload}"
 
-    def test_person_fields_command_injection(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_person_fields_command_injection(self, client: TestClient, auth_headers: dict):
         """Person fields parameter should not allow command injection."""
         for payload in self.CMD_PAYLOADS:
             response = client.get(
@@ -138,9 +122,9 @@ class TestCommandInjection:
             )
             # Should return error (validation or 502 from contacts service)
             # but never 500 which might indicate code execution
-            assert response.status_code != 500, (
-                f"Suspicious response for command injection: {payload}"
-            )
+            assert (
+                response.status_code != 500
+            ), f"Suspicious response for command injection: {payload}"
 
 
 class TestHeaderInjection:
@@ -150,9 +134,7 @@ class TestHeaderInjection:
     sequences to add malicious headers.
     """
 
-    def test_crlf_injection_in_custom_header(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_crlf_injection_in_custom_header(self, client: TestClient, auth_headers: dict):
         """Custom headers should not allow CRLF injection.
 
         CRLF (\r\n) in header values could allow header injection.
@@ -172,19 +154,19 @@ class TestHeaderInjection:
                     headers={
                         **auth_headers,
                         "X-Custom-Header": payload,
-                    }
+                    },
                 )
                 # Should handle gracefully (200, 400, or sanitized)
-                assert response.status_code in [200, 400, 504], (
-                    f"Unexpected response for CRLF injection: {response.status_code}"
-                )
+                assert response.status_code in [
+                    200,
+                    400,
+                    504,
+                ], f"Unexpected response for CRLF injection: {response.status_code}"
             except Exception:
                 # Some clients reject malformed headers - this is acceptable
                 pass
 
-    def test_response_splitting_via_redirect(
-        self, client: TestClient
-    ):
+    def test_response_splitting_via_redirect(self, client: TestClient):
         """Test that response splitting attacks are prevented.
 
         Response splitting uses CRLF in parameters that end up in
@@ -192,8 +174,7 @@ class TestHeaderInjection:
         """
         # Attempt response splitting via potential redirect parameter
         response = client.get(
-            "/health",
-            headers={"X-Forwarded-Host": "evil.com\r\nX-Injected: true"}
+            "/health", headers={"X-Forwarded-Host": "evil.com\r\nX-Injected: true"}
         )
         # Should not reflect injected headers
         assert "X-Injected" not in response.headers
@@ -212,9 +193,7 @@ class TestNoSQLInjection:
         '{"$where": "this.password"}',
     ]
 
-    def test_json_body_nosql_injection(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_json_body_nosql_injection(self, client: TestClient, auth_headers: dict):
         """JSON body fields should not be vulnerable to NoSQL injection."""
         for payload in self.NOSQL_PAYLOADS:
             response = client.post(
@@ -225,14 +204,19 @@ class TestNoSQLInjection:
                     "timestamp": "2025-12-21T12:00:00Z",
                     "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
                     "event_type": "position",
-                    "payload": {}
-                }
+                    "payload": {},
+                },
             )
             # Should reject with validation error or process safely
             # 502 is acceptable when telemetry service is unavailable
-            assert response.status_code in [200, 201, 400, 409, 422, 502], (
-                f"Unexpected response for NoSQL injection: {payload}"
-            )
+            assert response.status_code in [
+                200,
+                201,
+                400,
+                409,
+                422,
+                502,
+            ], f"Unexpected response for NoSQL injection: {payload}"
 
 
 class TestXSSPayloads:
@@ -250,9 +234,7 @@ class TestXSSPayloads:
         "<svg onload=alert('XSS')>",
     ]
 
-    def test_xss_in_telemetry_payload(
-        self, client: TestClient, auth_headers: dict
-    ):
+    def test_xss_in_telemetry_payload(self, client: TestClient, auth_headers: dict):
         """XSS payloads in telemetry should be handled safely.
 
         While the API doesn't render HTML, we ensure XSS payloads
@@ -267,11 +249,15 @@ class TestXSSPayloads:
                     "timestamp": "2025-12-21T12:00:00Z",
                     "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
                     "event_type": "position",
-                    "payload": {"comment": payload}
-                }
+                    "payload": {"comment": payload},
+                },
             )
             # Should accept (JSON payload is just data), reject, or service unavailable
             # but never return 500
-            assert response.status_code in [200, 400, 409, 422, 502], (
-                f"Unexpected response for XSS payload: {payload}"
-            )
+            assert response.status_code in [
+                200,
+                400,
+                409,
+                422,
+                502,
+            ], f"Unexpected response for XSS payload: {payload}"
