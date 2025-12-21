@@ -2,6 +2,24 @@
 
 > A **microservices** platform demonstrating **Security by Design** principles for connected aviation telemetry systems.
 
+## TL;DR
+
+**What this proves:** End-to-end Security Engineering — from threat model to signed container in production-ready Kubernetes, with full observability and audit trail.
+
+**Evaluate in 15 minutes:**
+1. **Threat Model** → [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (STRIDE, 30+ threats, mitigations)
+2. **CI/CD Pipeline** → [.github/workflows/ci.yml](.github/workflows/ci.yml) (SAST → DAST → SBOM → Cosign)
+3. **K8s Policies** → [kubernetes/skylink/templates/networkpolicy.yaml](kubernetes/skylink/templates/networkpolicy.yaml) (zero-trust)
+
+**Verify controls work** (after `make up`):
+- RBAC denial → `curl -H "Authorization: Bearer $TOKEN" /admin/` → 403 + audit event
+- Idempotency → same event twice → 201 then 200
+- Rate limit → 61 requests/min → 429 + `rate_limit_exceeded_total` increments
+
+**Hiring relevance:** Security Engineering Lead · Platform Security · DevSecOps Director
+
+---
+
 [![CI](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml/badge.svg)](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#technology-stack)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120-009688?logo=fastapi&logoColor=white)](#technology-stack)
@@ -64,25 +82,22 @@
 
 ## Why This Project?
 
-This project is a **reference implementation** designed to teach and demonstrate how to apply **Security by Design** principles in a realistic microservices context. It is not a production system, but an educational platform showcasing security best practices.
+A **production-grade reference implementation** demonstrating how to embed Security by Design into a microservices architecture. Every pattern, control, and pipeline stage is designed for real-world adoption.
 
 **Who is this for?**
 
 | Audience | Value |
 |----------|-------|
-| **Developers** | Learn secure coding patterns with real, working code |
 | **Security Engineers** | Reference architecture for threat modeling and security controls |
 | **Architects** | Template for secure microservices design |
 | **DevOps/Platform Teams** | Secure CI/CD pipeline with SAST, SCA, DAST, SBOM, and image signing |
-| **Students & Trainers** | Educational material for security training |
 
 **What makes it different?**
 
-- **Complete stack**: From threat model to production-ready CI/CD
-- **Realistic scenario**: Aviation telemetry context with regulatory constraints
-- **Documented decisions**: Every security control is explained with rationale
-- **Testable**: 478 tests demonstrating security behaviors
-- **Runnable**: Full Docker Compose stack for hands-on learning
+- **Production patterns**: Secure defaults, operational readiness, not just documentation
+- **Complete lifecycle**: Threat model → code → test → build → deploy → monitor
+- **Evidence-based**: Every control has corresponding tests and audit events
+- **Runnable**: Full Docker Compose + Kubernetes Helm chart
 
 ---
 
@@ -515,19 +530,49 @@ poetry run pytest
 
 ## Security Maturity
 
-This project aims for a **9+/10 Security by Design** rating. Current status:
+| Category | Status | Evidence |
+|----------|--------|----------|
+| **Threat Modeling** | ✅ | [THREAT_MODEL.md](docs/THREAT_MODEL.md) — STRIDE, 30+ threats |
+| **Security Architecture** | ✅ | [SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) — DFD, trust boundaries |
+| **Authentication** | ✅ | `test_auth*.py`, `test_mtls*.py` — 45+ tests |
+| **Authorization** | ✅ | [AUTHORIZATION.md](docs/AUTHORIZATION.md) — 5 roles, 7 permissions |
+| **Monitoring & Alerting** | ✅ | [MONITORING.md](docs/MONITORING.md) — 14 alert rules |
+| **Audit Logging** | ✅ | [AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) — 20 event types |
+| **Key Management** | ✅ | [KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) — rotation scripts |
+| **Supply Chain Security** | ✅ | CI pipeline — SBOM, Cosign, Trivy |
+| **Kubernetes Security** | ✅ | [KUBERNETES.md](docs/KUBERNETES.md) — Pod Security Restricted |
 
-| Category | Status | Details |
-|----------|--------|---------|
-| **Threat Modeling** | Complete | STRIDE analysis, 30+ threats identified |
-| **Security Architecture** | Complete | DFD, trust boundaries, control mapping |
-| **Authentication** | Complete | JWT RS256 + mTLS cross-validation |
-| **Authorization** | Complete | RBAC with 5 roles, 7 permissions, least privilege |
-| **Monitoring & Alerting** | Complete | Prometheus + Grafana + 14 alert rules |
-| **Audit Logging** | Complete | 20 event types, JSON format, no PII |
-| **Key Management** | Complete | Rotation scripts, compliance docs |
-| **Supply Chain Security** | Complete | SBOM, image signing, vulnerability scanning |
-| **Kubernetes Security** | Complete | Helm chart, Pod Security, NetworkPolicies |
+---
+
+## Standards Alignment
+
+| Control | OWASP ASVS | NIST SSDF | SLSA | Zero Trust |
+|---------|------------|-----------|------|------------|
+| Threat Modeling (STRIDE) | V1.1 | PO.1 | — | — |
+| JWT RS256 + mTLS | V3.5, V9.1 | PS.1 | — | Identity verification |
+| RBAC (least privilege) | V4.1 | PS.1 | — | Explicit access |
+| Input validation | V5.1 | PW.5 | — | Never trust input |
+| SAST/DAST/SCA | V14.2 | PW.7, PW.8 | L1 | — |
+| SBOM + signing | V14.2 | PS.3 | L2 | — |
+| Container hardening | V14.1 | PO.5 | — | Assume breach |
+| NetworkPolicies | — | PO.5 | — | Micro-segmentation |
+| Audit logging | V7.1 | PW.9 | — | Continuous monitoring |
+
+---
+
+## Portability
+
+While built around an aviation telemetry scenario, all security controls are **directly reusable** for:
+
+| Domain | Applicable Controls |
+|--------|---------------------|
+| **SaaS B2B / API Platform** | JWT auth, RBAC, rate limiting, audit trail, supply chain security |
+| **Fintech / Regulated** | Threat model, key rotation, encryption at rest, compliance logging |
+| **IAM / Identity Platform** | mTLS, OAuth integration, RBAC matrix, audit events |
+| **Marketplace / Multi-tenant** | Tenant isolation (NetworkPolicies), per-identity rate limiting |
+| **Healthcare / HIPAA** | PII minimization, encryption, audit trail, access control |
+
+The architecture patterns, CI/CD gates, and operational practices transfer directly to any API-based microservices environment.
 
 ---
 
@@ -566,7 +611,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Author
 
-**Laurent Giovannoni**
+**Laurent Giovannoni** — 20+ years scaling SaaS platforms as CTO/VP Engineering
+
+This project demonstrates how I approach **Security Engineering at scale**:
+- Embedding security gates into CI/CD without blocking velocity
+- Designing RBAC and IAM patterns that scale with organizational growth
+- Building observable, auditable systems that satisfy compliance requirements
+- Making security decisions explicit and traceable (threat model → control → test → evidence)
+
+Beyond code, I bring experience in security design reviews, cross-team influence, and building security culture in engineering organizations.
+
+> **Security issues?** See [SECURITY.md](SECURITY.md) — please use GitHub Security Advisories, not LinkedIn.
 
 ## License
 
