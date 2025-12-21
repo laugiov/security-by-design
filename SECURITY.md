@@ -10,8 +10,7 @@ If you discover a security vulnerability in this project, please report it respo
 - Contact via LinkedIn for security issues
 
 **Do:**
-- Use [GitHub Security Advisories](https://github.com/laugiov/security-by-design/security/advisories/new) (preferred)
-- Email: security@giovannoni.dev (if available)
+- Use [GitHub Security Advisories](https://github.com/laugiov/security-by-design/security/advisories/new)
 
 ## Response Timeline
 
