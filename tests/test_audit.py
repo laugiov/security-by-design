@@ -11,19 +11,17 @@ These tests verify:
 import json
 import logging
 from io import StringIO
-from unittest.mock import patch
 
 import pytest
 
 from skylink.audit import AuditLogger, audit_logger, get_audit_logger
 from skylink.audit_events import (
+    EVENT_METADATA,
     ActorType,
     EventCategory,
     EventOutcome,
     EventSeverity,
     EventType,
-    ResourceType,
-    EVENT_METADATA,
 )
 
 
@@ -208,7 +206,7 @@ class TestConvenienceMethods:
         """log_auth_success should log correct event."""
         logger, capture = logger_with_capture
 
-        event_id = logger.log_auth_success(
+        logger.log_auth_success(
             actor_id="aircraft-123",
             ip_address="10.0.0.1",
             trace_id="trace-xyz",
