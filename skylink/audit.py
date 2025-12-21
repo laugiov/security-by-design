@@ -428,6 +428,62 @@ class AuditLogger:
             details={"reason": reason},
         )
 
+    def log_authorization_failure(
+        self,
+        actor_id: Optional[str] = None,
+        role: Optional[str] = None,
+        required_permission: Optional[str] = None,
+        required_roles: Optional[list[str]] = None,
+        endpoint: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        trace_id: Optional[str] = None,
+    ) -> str:
+        """Log authorization failure (RBAC denial)."""
+        details = {
+            "role": role,
+            "endpoint": endpoint,
+        }
+        if required_permission:
+            details["required_permission"] = required_permission
+        if required_roles:
+            details["required_roles"] = required_roles
+
+        return self.log(
+            event_type=EventType.AUTHZ_FAILURE,
+            actor_type=ActorType.AIRCRAFT if actor_id else ActorType.UNKNOWN,
+            actor_id=actor_id,
+            action="access",
+            outcome=EventOutcome.DENIED,
+            details=details,
+            trace_id=trace_id,
+            ip_address=ip_address,
+        )
+
+    def log_authorization_success(
+        self,
+        actor_id: str,
+        role: str,
+        permission: str,
+        endpoint: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        trace_id: Optional[str] = None,
+    ) -> str:
+        """Log successful authorization check."""
+        return self.log(
+            event_type=EventType.AUTHZ_SUCCESS,
+            actor_type=ActorType.AIRCRAFT,
+            actor_id=actor_id,
+            action="access",
+            outcome=EventOutcome.SUCCESS,
+            details={
+                "role": role,
+                "permission": permission,
+                "endpoint": endpoint,
+            },
+            trace_id=trace_id,
+            ip_address=ip_address,
+        )
+
 
 # Global audit logger instance for gateway service
 audit_logger = AuditLogger("gateway")

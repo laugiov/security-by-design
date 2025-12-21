@@ -33,7 +33,7 @@ This project is a **reference implementation** designed to teach and demonstrate
 - **Complete stack**: From threat model to production-ready CI/CD
 - **Realistic scenario**: Aviation telemetry context with regulatory constraints
 - **Documented decisions**: Every security control is explained with rationale
-- **Testable**: 300+ tests demonstrating security behaviors
+- **Testable**: 470+ tests demonstrating security behaviors
 - **Runnable**: Full Docker Compose stack for hands-on learning
 
 ---
@@ -51,6 +51,7 @@ This aviation context justifies strict security requirements:
 | Requirement | Justification |
 |-------------|---------------|
 | **Strong Authentication** | Only authorized aircraft can transmit data |
+| **Role-Based Access Control** | 5 roles with least-privilege permissions |
 | **Data Integrity** | Telemetry must be tamper-proof (idempotency, checksums) |
 | **Privacy Protection** | GPS coordinates rounded, PII minimized in logs |
 | **Audit Trail** | All security events logged for compliance |
@@ -65,6 +66,7 @@ This aviation context justifies strict security requirements:
 **SkyLink** is a demonstration platform for connected aircraft services, built with security as a foundational principle. This project showcases practical Security by Design implementations:
 
 - **Multi-layer authentication** (JWT RS256 + mTLS)
+- **Role-Based Access Control** (5 roles, 7 permissions, principle of least privilege)
 - **Defense in depth** (rate limiting, payload limits, strict validation)
 - **Privacy by Design** (PII minimization, structured logging without sensitive data)
 - **Secure CI/CD pipeline** (SAST, SCA, DAST, SBOM, image signing)
@@ -109,15 +111,16 @@ This aviation context justifies strict security requirements:
 
 ## Security by Design Features
 
-### 1. Multi-Layer Authentication
+### 1. Multi-Layer Authentication & Authorization
 
 | Layer | Mechanism | Implementation |
 |-------|-----------|----------------|
 | **Transport** | mTLS (Mutual TLS) | X.509 client certificates, CA validation |
 | **Application** | JWT RS256 | 2048-bit RSA keys, 15-min expiry, audience validation |
 | **Cross-Validation** | CN ↔ JWT sub | Certificate CN must match JWT subject |
+| **Authorization** | RBAC | 5 roles, 7 permissions, principle of least privilege |
 
-**Implementation**: [skylink/auth.py](skylink/auth.py), [skylink/mtls.py](skylink/mtls.py)
+**Implementation**: [skylink/auth.py](skylink/auth.py), [skylink/mtls.py](skylink/mtls.py), [skylink/rbac.py](skylink/rbac.py)
 
 ### 2. Defense in Depth
 
@@ -311,9 +314,9 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 | `GET` | `/health` | Health check | No |
 | `GET` | `/metrics` | Prometheus metrics | No |
 | `POST` | `/auth/token` | Obtain JWT token | No |
-| `POST` | `/telemetry/ingest` | Ingest telemetry data | JWT |
-| `GET` | `/weather/current` | Current weather | JWT |
-| `GET` | `/contacts/` | List contacts | JWT |
+| `POST` | `/telemetry/ingest` | Ingest telemetry data | JWT + RBAC (telemetry:write) |
+| `GET` | `/weather/current` | Current weather | JWT + RBAC (weather:read) |
+| `GET` | `/contacts/` | List contacts | JWT + RBAC (contacts:read) |
 
 ### HTTP Status Codes
 
@@ -323,7 +326,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 | `201` | Created |
 | `400` | Validation error |
 | `401` | Unauthorized (missing/invalid JWT) |
-| `403` | Forbidden (mTLS CN ≠ JWT sub) |
+| `403` | Forbidden (mTLS CN ≠ JWT sub, or RBAC permission denied) |
 | `409` | Conflict (idempotency violation) |
 | `413` | Payload too large |
 | `429` | Rate limit exceeded |
@@ -341,6 +344,8 @@ skylink/
 │   ├── mtls.py              # mTLS configuration
 │   ├── middlewares.py       # Security headers, logging, payload limit
 │   ├── rate_limit.py        # Rate limiting (slowapi)
+│   ├── rbac.py              # Role-Based Access Control
+│   ├── rbac_roles.py        # Role and permission definitions
 │   ├── config.py            # Configuration management
 │   └── routers/             # API endpoints
 ├── telemetry/               # Telemetry service (port 8001)

@@ -36,15 +36,18 @@ def client() -> Generator[TestClient, None, None]:
 
 @pytest.fixture
 def auth_token() -> str:
-    """Valid JWT token for the default test aircraft.
+    """Valid JWT token for the default test aircraft with admin role.
+
+    Uses admin role to ensure all endpoints are accessible for security testing.
+    Security tests need full access to verify input validation, injection protection, etc.
 
     Returns:
-        str: Valid RS256-signed JWT token
+        str: Valid RS256-signed JWT token with admin role
 
     Note:
         Token is for aircraft ID: 550e8400-e29b-41d4-a716-446655440000
     """
-    return create_access_token("550e8400-e29b-41d4-a716-446655440000")
+    return create_access_token("550e8400-e29b-41d4-a716-446655440000", role="admin")
 
 
 @pytest.fixture
@@ -151,20 +154,24 @@ def jwt_public_key():
 def auth_token_aircraft_a() -> str:
     """Token for Aircraft A (for cross-aircraft tests).
 
+    Uses admin role to ensure full access for security testing.
+
     Returns:
         str: Valid JWT for aircraft A
     """
-    return create_access_token("aircraft-a-00000000-0000-0000-0000-000000000001")
+    return create_access_token("aircraft-a-00000000-0000-0000-0000-000000000001", role="admin")
 
 
 @pytest.fixture
 def auth_token_aircraft_b() -> str:
     """Token for Aircraft B (for cross-aircraft tests).
 
+    Uses admin role to ensure full access for security testing.
+
     Returns:
         str: Valid JWT for aircraft B
     """
-    return create_access_token("aircraft-b-00000000-0000-0000-0000-000000000002")
+    return create_access_token("aircraft-b-00000000-0000-0000-0000-000000000002", role="admin")
 
 
 @pytest.fixture

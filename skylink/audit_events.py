@@ -40,6 +40,12 @@ class EventType(str, Enum):
     CONTACTS_ACCESSED = "CONTACTS_ACCESSED"
     WEATHER_ACCESSED = "WEATHER_ACCESSED"
 
+    # Authorization Events (RBAC)
+    AUTHZ_SUCCESS = "AUTHZ_SUCCESS"
+    AUTHZ_FAILURE = "AUTHZ_FAILURE"
+    ROLE_ASSIGNED = "ROLE_ASSIGNED"
+    ROLE_REVOKED = "ROLE_REVOKED"
+
     # System Events
     SERVICE_STARTED = "SERVICE_STARTED"
     SERVICE_STOPPED = "SERVICE_STOPPED"
@@ -116,6 +122,10 @@ EVENT_METADATA = {
     EventType.OAUTH_FAILURE: (EventCategory.AUTHENTICATION, EventSeverity.WARNING),
     EventType.CONTACTS_ACCESSED: (EventCategory.DATA, EventSeverity.INFO),
     EventType.WEATHER_ACCESSED: (EventCategory.DATA, EventSeverity.INFO),
+    EventType.AUTHZ_SUCCESS: (EventCategory.AUTHORIZATION, EventSeverity.INFO),
+    EventType.AUTHZ_FAILURE: (EventCategory.AUTHORIZATION, EventSeverity.WARNING),
+    EventType.ROLE_ASSIGNED: (EventCategory.AUTHORIZATION, EventSeverity.INFO),
+    EventType.ROLE_REVOKED: (EventCategory.AUTHORIZATION, EventSeverity.WARNING),
     EventType.SERVICE_STARTED: (EventCategory.SYSTEM, EventSeverity.INFO),
     EventType.SERVICE_STOPPED: (EventCategory.SYSTEM, EventSeverity.INFO),
     EventType.CONFIG_CHANGED: (EventCategory.ADMIN, EventSeverity.WARNING),

@@ -6,9 +6,10 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from skylink.audit import audit_logger
-from skylink.auth import verify_jwt
 from skylink.models.weather.weather_data import WeatherData
 from skylink.rate_limit import RATE_LIMIT_PER_AIRCRAFT, limiter
+from skylink.rbac import require_permission
+from skylink.rbac_roles import Permission
 
 router = APIRouter(
     prefix="/weather",
@@ -51,7 +52,7 @@ async def get_current_weather(
     lang: Optional[str] = Query(
         None, min_length=2, max_length=2, description="ISO 639-1 language code"
     ),
-    token: dict = Depends(verify_jwt),
+    token: dict = Depends(require_permission(Permission.WEATHER_READ)),
 ):
     """Get current weather data for a location (requires JWT authentication).
 

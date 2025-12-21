@@ -36,6 +36,12 @@ class TokenRequest(BaseModel):
         description="Unique identifier of the aircraft",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
+    role: Optional[str] = Field(
+        default=None,
+        description="Optional role override (for demo/testing). "
+        "Valid values: aircraft_standard, aircraft_premium, ground_control, maintenance, admin",
+        examples=["aircraft_standard", "aircraft_premium"],
+    )
 
 
 class TokenResponse(BaseModel):
@@ -57,11 +63,12 @@ class TokenResponse(BaseModel):
     )
 
 
-def create_access_token(aircraft_id: str) -> str:
+def create_access_token(aircraft_id: str, role: str = "aircraft_standard") -> str:
     """Create a new JWT access token signed with RS256.
 
     Args:
         aircraft_id: The aircraft's UUID (becomes 'sub' claim)
+        role: The role for RBAC (defaults to 'aircraft_standard')
 
     Returns:
         str: Signed JWT token
@@ -73,7 +80,7 @@ def create_access_token(aircraft_id: str) -> str:
         - Token is NEVER logged
         - Short expiration (15 minutes max)
         - RS256 ensures only gateway can sign tokens
-        - Claims follow JWT best practices (sub, aud, iat, exp)
+        - Claims follow JWT best practices (sub, aud, iat, exp, role)
     """
     now = datetime.now(timezone.utc)
     expiration = now + timedelta(minutes=settings.jwt_expiration_minutes)
@@ -83,6 +90,7 @@ def create_access_token(aircraft_id: str) -> str:
         "aud": settings.jwt_audience,  # Audience: skylink
         "iat": int(now.timestamp()),  # Issued at
         "exp": int(expiration.timestamp()),  # Expiration
+        "role": role,  # Role for RBAC
     }
 
     try:

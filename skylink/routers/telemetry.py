@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from httpx import AsyncClient
 
 from skylink.audit import audit_logger
-from skylink.auth import verify_jwt
 
 # Import telemetry models
 from skylink.models.telemetry.telemetry_event import TelemetryEvent
@@ -18,6 +17,8 @@ from skylink.models.telemetry.telemetry_obtain_token200_response import (
     TelemetryObtainToken200Response,
 )
 from skylink.models.telemetry.telemetry_obtain_token_request import TelemetryObtainTokenRequest
+from skylink.rbac import require_permission
+from skylink.rbac_roles import Permission
 
 router = APIRouter(
     prefix="/telemetry",
@@ -83,7 +84,7 @@ async def ingest_telemetry(
     request: Request,
     event: TelemetryEvent,
     response: Response,
-    claims: dict = Depends(verify_jwt),
+    claims: dict = Depends(require_permission(Permission.TELEMETRY_WRITE)),
     authorization: str = Header(..., description="Bearer JWT token"),
 ):
     """Ingest aircraft telemetry data.
