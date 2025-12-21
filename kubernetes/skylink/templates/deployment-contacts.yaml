@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skylink.fullname" . }}-contacts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contacts
+spec:
+  replicas: {{ .Values.contacts.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: contacts
+  template:
+    metadata:
+      labels:
+        {{- include "skylink.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: contacts
+        # Label for network policy
+        app.kubernetes.io/tier: internal
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "skylink.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "skylink.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: contacts
+          image: "{{ .Values.contacts.image.repository }}:{{ .Values.contacts.image.tag }}"
+          imagePullPolicy: {{ .Values.contacts.image.pullPolicy }}
+          securityContext:
+            {{- include "skylink.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8003
+              protocol: TCP
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skylink.fullname" . }}-config
+                  key: LOG_LEVEL
+            - name: DEMO_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skylink.fullname" . }}-config
+                  key: DEMO_MODE
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skylink.fullname" . }}-secrets
+                  key: ENCRYPTION_KEY
+            {{- if .Values.postgresql.enabled }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skylink.fullname" . }}-secrets
+                  key: DATABASE_URL
+            {{- end }}
+          {{- include "skylink.livenessProbe" . | nindent 10 }}
+          {{- include "skylink.readinessProbe" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.contacts.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "skylink.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "skylink.volumes" . | nindent 8 }}
+      {{- with .Values.contacts.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.contacts.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "skylink.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: contacts
+                topologyKey: kubernetes.io/hostname

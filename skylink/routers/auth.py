@@ -68,10 +68,12 @@ async def obtain_token(request: Request, body: TokenRequest) -> TokenResponse:
     trace_id = _get_trace_id(request)
     client_ip = _get_client_ip(request)
     aircraft_id = str(body.aircraft_id)
+    # Use requested role or default to aircraft_standard
+    role = body.role if body.role else "aircraft_standard"
 
     try:
-        # Generate JWT token signed with RS256
-        token = create_access_token(aircraft_id=aircraft_id)
+        # Generate JWT token signed with RS256, including role for RBAC
+        token = create_access_token(aircraft_id=aircraft_id, role=role)
 
         # Audit: Log successful token issuance
         audit_logger.log_auth_success(

@@ -514,6 +514,7 @@ This architecture covers:
 | **Transport** | Certificate validation | X.509, CA-signed | `scripts/generate_*.sh` | :white_check_mark: |
 | **Network** | Service isolation | Docker bridge network | `docker-compose.yml` | :white_check_mark: |
 | **Application** | Authentication | JWT RS256 | `skylink/auth.py` | :white_check_mark: |
+| **Application** | Authorization | RBAC (5 roles, 7 permissions) | `skylink/rbac.py` | :white_check_mark: |
 | **Application** | Cross-validation | CN == JWT sub | `skylink/mtls.py` | :white_check_mark: |
 | **Application** | Rate limiting | 60 req/min per identity | `skylink/rate_limit.py` | :white_check_mark: |
 | **Application** | Input validation | Pydantic extra=forbid | `skylink/models/` | :white_check_mark: |
@@ -549,6 +550,7 @@ This architecture covers:
 │   │   │                                                            │   │ │
 │   │   │   Layer 3: APPLICATION                                     │   │ │
 │   │   │   ├── JWT RS256 authentication                             │   │ │
+│   │   │   ├── RBAC (5 roles, 7 permissions)                       │   │ │
 │   │   │   ├── CN ↔ JWT cross-validation                           │   │ │
 │   │   │   ├── Rate limiting (60 req/min)                          │   │ │
 │   │   │   ├── Input validation (Pydantic)                         │   │ │
@@ -747,6 +749,35 @@ This architecture covers:
 | contacts | gateway | Google APIs (HTTPS), db:5432 |
 | db | contacts | None |
 
+### 9.3 Kubernetes Network Policies
+
+For production Kubernetes deployments, network policies enforce zero-trust networking:
+
+```yaml
+# Default: deny all traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: skylink-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+```
+
+**Kubernetes Network Policy Matrix**:
+
+| Policy | From | To | Ports | Purpose |
+|--------|------|-----|-------|---------|
+| `gateway-ingress` | ingress-nginx | gateway | 8000 | External access |
+| `gateway-egress` | gateway | internal services | 8001-8003 | Service routing |
+| `internal-ingress` | gateway | telemetry/weather/contacts | 8001-8003 | Internal traffic |
+| `internal-egress` | internal services | external APIs | 443 | API calls |
+| `prometheus-scrape` | monitoring namespace | all pods | 8000-8003 | Metrics collection |
+
+See [KUBERNETES.md](KUBERNETES.md) for full network policy configuration.
+
 ---
 
 ## 10. References
@@ -754,6 +785,8 @@ This architecture covers:
 ### 10.1 Internal Documents
 
 - [THREAT_MODEL.md](THREAT_MODEL.md) - STRIDE threat analysis
+- [AUTHORIZATION.md](AUTHORIZATION.md) - RBAC roles and permissions
+- [KUBERNETES.md](KUBERNETES.md) - Kubernetes deployment with security policies
 - [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) - Technical implementation details
 
 ### 10.2 External References
@@ -786,9 +819,22 @@ Permissions-Policy: geolocation=(), microphone=(), camera=()
   "sub": "aircraft_id (from mTLS CN)",
   "aud": "skylink",
   "iat": 1734600000,
-  "exp": 1734600900
+  "exp": 1734600900,
+  "role": "aircraft_standard"
 }
 ```
+
+### RBAC Roles
+
+| Role | Description | Key Permissions |
+|------|-------------|-----------------|
+| `aircraft_standard` | Default aircraft | weather:read, telemetry:write |
+| `aircraft_premium` | Premium aircraft | + contacts:read |
+| `ground_control` | Ground control | weather:read, contacts:read, telemetry:read |
+| `maintenance` | Maintenance | telemetry:read/write, config:read |
+| `admin` | Administrator | All permissions |
+
+See [AUTHORIZATION.md](AUTHORIZATION.md) for complete RBAC documentation.
 
 ### Rate Limits
 

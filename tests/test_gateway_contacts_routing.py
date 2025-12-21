@@ -17,8 +17,11 @@ VALID_AIRCRAFT_ID = "550e8400-e29b-41d4-a716-446655440000"
 
 @pytest.fixture
 def valid_token():
-    """Fixture providing a valid JWT token."""
-    return create_access_token(VALID_AIRCRAFT_ID)
+    """Fixture providing a valid JWT token with admin role.
+
+    Admin role is needed to access contacts endpoint (RBAC).
+    """
+    return create_access_token(VALID_AIRCRAFT_ID, role="admin")
 
 
 class TestContactsRouting:

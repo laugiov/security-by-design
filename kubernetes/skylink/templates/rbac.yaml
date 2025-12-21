@@ -1,0 +1,36 @@
+# =============================================================================
+# Kubernetes RBAC Configuration
+# =============================================================================
+# Following the principle of least privilege - the application doesn't need
+# any Kubernetes API access, so we create an empty Role.
+
+{{- if .Values.serviceAccount.create }}
+---
+# Empty Role - application doesn't need K8s API access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "skylink.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+rules: []  # No rules = no permissions (least privilege)
+
+---
+# RoleBinding to bind the empty role to service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "skylink.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "skylink.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "skylink.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

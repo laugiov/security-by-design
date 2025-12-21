@@ -1,0 +1,58 @@
+# Internal services - not exposed to ingress
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skylink.fullname" . }}-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: telemetry
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8001
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "skylink.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: telemetry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skylink.fullname" . }}-weather
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: weather
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8002
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "skylink.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: weather
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skylink.fullname" . }}-contacts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contacts
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8003
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "skylink.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: contacts

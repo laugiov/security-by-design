@@ -143,6 +143,13 @@ curl -s -X POST http://localhost:8000/auth/token \
 | `MTLS_FAILURE` | warning | mTLS certificate invalid |
 | `MTLS_CN_MISMATCH` | warning | Certificate CN != JWT subject |
 
+### Authorization Events (RBAC)
+
+| Event Type | Severity | Description |
+|------------|----------|-------------|
+| `AUTHZ_SUCCESS` | info | Permission granted |
+| `AUTHZ_FAILURE` | warning | Permission denied (403) |
+
 ### Security Events
 
 | Event Type | Severity | Description |
@@ -219,6 +226,8 @@ audit_logger.log_contacts_accessed(
 | `log_mtls_success()` | MTLS_SUCCESS |
 | `log_mtls_failure()` | MTLS_FAILURE |
 | `log_mtls_cn_mismatch()` | MTLS_CN_MISMATCH |
+| `log_authz_success()` | AUTHZ_SUCCESS |
+| `log_authz_failure()` | AUTHZ_FAILURE |
 | `log_rate_limit_exceeded()` | RATE_LIMIT_EXCEEDED |
 | `log_telemetry_created()` | TELEMETRY_CREATED |
 | `log_telemetry_duplicate()` | TELEMETRY_DUPLICATE |
@@ -397,6 +406,7 @@ docker compose logs gateway | grep "abc123"
 | Category | Event Types |
 |----------|-------------|
 | authentication | AUTH_*, MTLS_*, OAUTH_* |
+| authorization | AUTHZ_SUCCESS, AUTHZ_FAILURE |
 | security | RATE_LIMIT_EXCEEDED |
 | data | TELEMETRY_*, CONTACTS_*, WEATHER_* |
 | admin | CONFIG_CHANGED |

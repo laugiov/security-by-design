@@ -1,0 +1,97 @@
+# Development environment values
+# Usage: helm install skylink ./kubernetes/skylink -f kubernetes/skylink/values-dev.yaml
+
+# Reduced replicas for development
+gateway:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+telemetry:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+weather:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+contacts:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+# Disable network policies for easier debugging
+networkPolicy:
+  enabled: false
+
+# Local ingress
+ingress:
+  enabled: true
+  className: nginx
+  host: skylink.local
+  mtls:
+    enabled: false
+  tls:
+    enabled: false
+
+# Create secrets directly (NOT for production!)
+secrets:
+  create: true
+  # These are placeholder values - override with --set or use real keys
+  jwtPrivateKey: "REPLACE_WITH_REAL_KEY"
+  jwtPublicKey: "REPLACE_WITH_REAL_KEY"
+  encryptionKey: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+# Enable demo mode
+config:
+  logLevel: "DEBUG"
+  demoMode: "true"
+
+# Disable PDB for single replica
+podDisruptionBudget:
+  enabled: false
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false  # Requires Prometheus Operator
+
+# PostgreSQL for local development
+postgresql:
+  enabled: true
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  auth:
+    database: skylink_dev
+    username: skylink
+    password: "dev_password_change_me"

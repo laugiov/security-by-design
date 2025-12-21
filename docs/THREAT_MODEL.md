@@ -53,9 +53,9 @@ The service provides the following capabilities:
 ┌────────────────────────────────┴────────────────────────────────┐
 │                      API GATEWAY (:8000)                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ Security     │  │ Rate         │  │ JWT RS256            │   │
-│  │ Headers      │  │ Limiting     │  │ Authentication       │   │
-│  │ (OWASP)      │  │ (slowapi)    │  │ + mTLS Validation    │   │
+│  │ Security     │  │ Rate         │  │ JWT RS256 + RBAC     │   │
+│  │ Headers      │  │ Limiting     │  │ Authentication &     │   │
+│  │ (OWASP)      │  │ (slowapi)    │  │ Authorization        │   │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 └─────────────┬──────────────┬──────────────┬─────────────────────┘
               │              │              │
@@ -76,7 +76,7 @@ The service provides the following capabilities:
 
 | Component | Responsibility | Security Controls |
 |-----------|---------------|-------------------|
-| **API Gateway** | Authentication, routing, rate limiting | mTLS, JWT RS256, OWASP headers |
+| **API Gateway** | Authentication, authorization, routing, rate limiting | mTLS, JWT RS256, RBAC, OWASP headers |
 | **Telemetry Service** | Aircraft data ingestion | Idempotency, input validation |
 | **Weather Service** | External API proxy | Demo mode fallback |
 | **Contacts Service** | OAuth flow, Google API | Token encryption (AES-256-GCM) |

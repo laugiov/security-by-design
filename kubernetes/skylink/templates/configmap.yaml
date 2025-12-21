@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skylink.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+data:
+  # JWT Configuration
+  JWT_AUDIENCE: {{ .Values.config.jwtAudience | quote }}
+  JWT_EXPIRY: {{ .Values.config.jwtExpiry | quote }}
+
+  # Rate Limiting
+  RATE_LIMIT: {{ .Values.config.rateLimit | quote }}
+
+  # Logging
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+
+  # Demo Mode (for weather/contacts services)
+  DEMO_MODE: {{ .Values.config.demoMode | quote }}
+
+  # Service URLs (for gateway)
+  TELEMETRY_SERVICE_URL: "http://{{ include "skylink.fullname" . }}-telemetry:8001"
+  WEATHER_SERVICE_URL: "http://{{ include "skylink.fullname" . }}-weather:8002"
+  CONTACTS_SERVICE_URL: "http://{{ include "skylink.fullname" . }}-contacts:8003"

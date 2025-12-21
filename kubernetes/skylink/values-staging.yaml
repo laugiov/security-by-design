@@ -1,0 +1,101 @@
+# Staging environment values
+# Usage: helm install skylink ./kubernetes/skylink -f kubernetes/skylink/values-staging.yaml
+
+gateway:
+  replicaCount: 2
+  image:
+    tag: "staging"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+telemetry:
+  replicaCount: 2
+  image:
+    tag: "staging"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+weather:
+  replicaCount: 2
+  image:
+    tag: "staging"
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+contacts:
+  replicaCount: 2
+  image:
+    tag: "staging"
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Enable network policies
+networkPolicy:
+  enabled: true
+
+# Staging ingress
+ingress:
+  enabled: true
+  className: nginx
+  host: skylink.staging.example.com
+  mtls:
+    enabled: false
+  tls:
+    enabled: true
+    secretName: skylink-staging-tls
+
+# Use external secrets manager
+secrets:
+  create: false
+  externalSecrets:
+    enabled: true
+    secretStoreRef:
+      name: vault-backend
+      kind: SecretStore
+    refreshInterval: "1h"
+
+# Staging config
+config:
+  logLevel: "INFO"
+  demoMode: "false"
+
+# Enable PDB
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Enable monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+
+# PostgreSQL (use managed database in staging)
+postgresql:
+  enabled: false

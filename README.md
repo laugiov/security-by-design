@@ -33,7 +33,7 @@ This project is a **reference implementation** designed to teach and demonstrate
 - **Complete stack**: From threat model to production-ready CI/CD
 - **Realistic scenario**: Aviation telemetry context with regulatory constraints
 - **Documented decisions**: Every security control is explained with rationale
-- **Testable**: 300+ tests demonstrating security behaviors
+- **Testable**: 470+ tests demonstrating security behaviors
 - **Runnable**: Full Docker Compose stack for hands-on learning
 
 ---
@@ -51,6 +51,7 @@ This aviation context justifies strict security requirements:
 | Requirement | Justification |
 |-------------|---------------|
 | **Strong Authentication** | Only authorized aircraft can transmit data |
+| **Role-Based Access Control** | 5 roles with least-privilege permissions |
 | **Data Integrity** | Telemetry must be tamper-proof (idempotency, checksums) |
 | **Privacy Protection** | GPS coordinates rounded, PII minimized in logs |
 | **Audit Trail** | All security events logged for compliance |
@@ -65,6 +66,7 @@ This aviation context justifies strict security requirements:
 **SkyLink** is a demonstration platform for connected aircraft services, built with security as a foundational principle. This project showcases practical Security by Design implementations:
 
 - **Multi-layer authentication** (JWT RS256 + mTLS)
+- **Role-Based Access Control** (5 roles, 7 permissions, principle of least privilege)
 - **Defense in depth** (rate limiting, payload limits, strict validation)
 - **Privacy by Design** (PII minimization, structured logging without sensitive data)
 - **Secure CI/CD pipeline** (SAST, SCA, DAST, SBOM, image signing)
@@ -109,15 +111,16 @@ This aviation context justifies strict security requirements:
 
 ## Security by Design Features
 
-### 1. Multi-Layer Authentication
+### 1. Multi-Layer Authentication & Authorization
 
 | Layer | Mechanism | Implementation |
 |-------|-----------|----------------|
 | **Transport** | mTLS (Mutual TLS) | X.509 client certificates, CA validation |
 | **Application** | JWT RS256 | 2048-bit RSA keys, 15-min expiry, audience validation |
 | **Cross-Validation** | CN ↔ JWT sub | Certificate CN must match JWT subject |
+| **Authorization** | RBAC | 5 roles, 7 permissions, principle of least privilege |
 
-**Implementation**: [skylink/auth.py](skylink/auth.py), [skylink/mtls.py](skylink/mtls.py)
+**Implementation**: [skylink/auth.py](skylink/auth.py), [skylink/mtls.py](skylink/mtls.py), [skylink/rbac.py](skylink/rbac.py)
 
 ### 2. Defense in Depth
 
@@ -204,7 +207,7 @@ CI/CD pipeline with security gates at every stage:
 | **Ruff** | Python linting | lint |
 | **Black** | Code formatting | lint |
 | **Bandit** | SAST (security linting) | lint |
-| **pytest** | Unit tests (305 tests, 81% coverage) | test |
+| **pytest** | Unit tests (470+ tests, 81% coverage) | test |
 | **Trivy** | Container vulnerability scanning | scan |
 | **pip-audit** | Python dependency SCA | scan |
 | **Gitleaks** | Secret detection | scan |
@@ -311,9 +314,9 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 | `GET` | `/health` | Health check | No |
 | `GET` | `/metrics` | Prometheus metrics | No |
 | `POST` | `/auth/token` | Obtain JWT token | No |
-| `POST` | `/telemetry/ingest` | Ingest telemetry data | JWT |
-| `GET` | `/weather/current` | Current weather | JWT |
-| `GET` | `/contacts/` | List contacts | JWT |
+| `POST` | `/telemetry/ingest` | Ingest telemetry data | JWT + RBAC (telemetry:write) |
+| `GET` | `/weather/current` | Current weather | JWT + RBAC (weather:read) |
+| `GET` | `/contacts/` | List contacts | JWT + RBAC (contacts:read) |
 
 ### HTTP Status Codes
 
@@ -323,7 +326,7 @@ curl -s -X POST http://localhost:8000/telemetry/ingest \
 | `201` | Created |
 | `400` | Validation error |
 | `401` | Unauthorized (missing/invalid JWT) |
-| `403` | Forbidden (mTLS CN ≠ JWT sub) |
+| `403` | Forbidden (mTLS CN ≠ JWT sub, or RBAC permission denied) |
 | `409` | Conflict (idempotency violation) |
 | `413` | Payload too large |
 | `429` | Rate limit exceeded |
@@ -341,6 +344,8 @@ skylink/
 │   ├── mtls.py              # mTLS configuration
 │   ├── middlewares.py       # Security headers, logging, payload limit
 │   ├── rate_limit.py        # Rate limiting (slowapi)
+│   ├── rbac.py              # Role-Based Access Control
+│   ├── rbac_roles.py        # Role and permission definitions
 │   ├── config.py            # Configuration management
 │   └── routers/             # API endpoints
 ├── telemetry/               # Telemetry service (port 8001)
@@ -348,8 +353,11 @@ skylink/
 ├── contacts/                # Contacts service (port 8003)
 ├── scripts/                 # PKI & utility scripts
 ├── tests/                   # Test suite
+├── kubernetes/              # Kubernetes Helm chart
+│   └── skylink/             # Helm chart with security policies
 ├── docs/                    # Documentation
 │   ├── DEMO.md              # Demo guide
+│   ├── KUBERNETES.md        # Kubernetes deployment guide
 │   ├── TECHNICAL_DOCUMENTATION.md  # Technical documentation
 │   ├── GITHUB_CI_SETUP.md   # GitHub Actions setup guide
 │   └── GITLAB_CI_SETUP.md   # GitLab CI/CD setup guide
@@ -370,6 +378,8 @@ skylink/
 | [docs/MONITORING.md](docs/MONITORING.md) | Security monitoring with Prometheus and Grafana |
 | [docs/KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) | Cryptographic key management, rotation procedures, compliance |
 | [docs/AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) | Audit event logging, security event tracking, compliance |
+| [docs/AUTHORIZATION.md](docs/AUTHORIZATION.md) | Role-Based Access Control (RBAC), permissions, role matrix |
+| [docs/KUBERNETES.md](docs/KUBERNETES.md) | Kubernetes deployment with Helm, security policies, operations |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
@@ -404,7 +414,7 @@ make test
 poetry run pytest
 ```
 
-**305 tests** with **81% coverage** — covering authentication, rate limiting, input validation, idempotency, security headers, error handling, and service integration.
+**470+ tests** with **81% coverage** — covering authentication, RBAC authorization, rate limiting, input validation, idempotency, OWASP Top 10 security tests, security headers, error handling, and service integration.
 
 ---
 
@@ -413,8 +423,10 @@ poetry run pytest
 - [x] **Threat Modeling** — STRIDE analysis in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [x] **Strict Input Validation** — Pydantic `extra="forbid"`, reject unknown fields
 - [x] **JWT RS256 Authentication** — Short TTL (15 min), audience validation
+- [x] **RBAC Authorization** — 5 roles, 7 permissions, least privilege principle
 - [x] **mTLS Cross-Validation** — Certificate CN must match JWT subject
 - [x] **Rate Limiting** — Per-identity throttling with Prometheus counter
+- [x] **OWASP Top 10 Security Tests** — 97 tests covering injection, XSS, access control, etc.
 - [x] **Security Headers** — OWASP recommended set
 - [x] **Structured Logging** — JSON format, no PII, trace_id correlation
 - [x] **SAST** — Bandit security linting
@@ -438,7 +450,7 @@ This project aims for a **9+/10 Security by Design** rating. Current status:
 | **Threat Modeling** | Complete | STRIDE analysis, 30+ threats identified |
 | **Security Architecture** | Complete | DFD, trust boundaries, control mapping |
 | **Authentication** | Complete | JWT RS256 + mTLS cross-validation |
-| **Authorization** | Partial | Per-identity rate limiting (RBAC planned) |
+| **Authorization** | Complete | RBAC with 5 roles, 7 permissions, least privilege |
 | **Monitoring & Alerting** | Complete | Prometheus + Grafana + 14 alert rules |
 | **Audit Logging** | Complete | 20 event types, JSON format, no PII |
 | **Key Management** | Complete | Rotation scripts, compliance docs |

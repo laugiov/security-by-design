@@ -4,7 +4,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from skylink.audit import audit_logger
-from skylink.auth import verify_jwt
+from skylink.rbac import require_permission
+from skylink.rbac_roles import Permission
 
 router = APIRouter(
     prefix="/contacts",
@@ -46,7 +47,7 @@ async def list_contacts(
     ),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(10, ge=1, le=100, description="Items per page"),
-    token: dict = Depends(verify_jwt),
+    token: dict = Depends(require_permission(Permission.CONTACTS_READ)),
 ):
     """List contacts from Contacts microservice (requires JWT authentication).
 
