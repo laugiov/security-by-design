@@ -221,6 +221,7 @@ jobs:
       contents: read
       packages: read
       security-events: write
+      actions: read
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -329,6 +330,7 @@ jobs:
         with:
           target: 'http://localhost:8000'
           allow_issue_writing: false
+          artifact_name: zap-report
 
       - name: Stop application
         if: always()

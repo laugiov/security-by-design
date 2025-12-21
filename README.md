@@ -144,14 +144,21 @@ CI/CD pipeline with security gates at every stage:
 
 ### Supply Chain Security
 
-Images are signed using [Sigstore Cosign](https://github.com/sigstore/cosign) with SBOM attestation:
+Images are signed using [Sigstore Cosign](https://github.com/sigstore/cosign) with **keyless signing** (OIDC) and SBOM attestation:
 
 ```bash
-# Verify image signature
-cosign verify --key cosign.pub $REGISTRY_IMAGE:latest
+# Verify image signature (keyless)
+cosign verify \
+  --certificate-identity-regexp="https://github.com/laugiov/security-by-design" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  ghcr.io/laugiov/security-by-design:latest
 
 # Verify SBOM attestation
-cosign verify-attestation --key cosign.pub --type cyclonedx $REGISTRY_IMAGE:latest
+cosign verify-attestation \
+  --certificate-identity-regexp="https://github.com/laugiov/security-by-design" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  --type cyclonedx \
+  ghcr.io/laugiov/security-by-design:latest
 ```
 
 ---
