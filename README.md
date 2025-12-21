@@ -14,6 +14,52 @@
 
 ---
 
+## Why This Project?
+
+This project is a **reference implementation** designed to teach and demonstrate how to apply **Security by Design** principles in a realistic microservices context. It is not a production system, but an educational platform showcasing security best practices.
+
+**Who is this for?**
+
+| Audience | Value |
+|----------|-------|
+| **Developers** | Learn secure coding patterns with real, working code |
+| **Security Engineers** | Reference architecture for threat modeling and security controls |
+| **Architects** | Template for secure microservices design |
+| **DevOps/Platform Teams** | Secure CI/CD pipeline with SAST, SCA, DAST, SBOM, and image signing |
+| **Students & Trainers** | Educational material for security training |
+
+**What makes it different?**
+
+- **Complete stack**: From threat model to production-ready CI/CD
+- **Realistic scenario**: Aviation telemetry context with regulatory constraints
+- **Documented decisions**: Every security control is explained with rationale
+- **Testable**: 300+ tests demonstrating security behaviors
+- **Runnable**: Full Docker Compose stack for hands-on learning
+
+---
+
+## The SkyLink Scenario
+
+**SkyLink** simulates a **connected aircraft telemetry platform** where:
+
+- **Aircraft** send real-time telemetry data (GPS position, speed, altitude)
+- **Crew members** access weather forecasts and contact information
+- **Ground systems** receive and process telemetry for flight monitoring
+
+This aviation context justifies strict security requirements:
+
+| Requirement | Justification |
+|-------------|---------------|
+| **Strong Authentication** | Only authorized aircraft can transmit data |
+| **Data Integrity** | Telemetry must be tamper-proof (idempotency, checksums) |
+| **Privacy Protection** | GPS coordinates rounded, PII minimized in logs |
+| **Audit Trail** | All security events logged for compliance |
+| **High Availability** | Rate limiting prevents DoS, circuit breakers for resilience |
+
+> **Note**: This is a fictional scenario for educational purposes. The security controls demonstrated are applicable to any API-based microservices architecture.
+
+---
+
 ## Overview
 
 **SkyLink** is a demonstration platform for connected aircraft services, built with security as a foundational principle. This project showcases practical Security by Design implementations:
@@ -106,11 +152,36 @@ Referrer-Policy: no-referrer
 Permissions-Policy: geolocation=(), microphone=(), camera=()
 ```
 
-### 5. Observability
+### 5. Observability & Monitoring
 
-- **Structured JSON Logging** with W3C trace correlation (`X-Trace-Id`)
-- **Prometheus Metrics** endpoint (`/metrics`)
-- **No sensitive data** in logs (tokens, secrets, PII never logged)
+| Feature | Description | Documentation |
+|---------|-------------|---------------|
+| **Structured JSON Logging** | W3C trace correlation (`X-Trace-Id`) | [middlewares.py](skylink/middlewares.py) |
+| **Prometheus Metrics** | Counters, histograms, gauges | `/metrics` endpoint |
+| **Grafana Dashboards** | Pre-configured security dashboard | [MONITORING.md](docs/MONITORING.md) |
+| **Audit Logging** | Security-relevant event tracking | [AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) |
+| **Alert Rules** | 14 security alerts (auth, rate limit, errors) | [security.yml](monitoring/prometheus/alerts/security.yml) |
+
+```bash
+# Start monitoring stack
+docker compose --profile monitoring up -d
+
+# Access dashboards
+# Grafana: http://localhost:3000 (admin/admin)
+# Prometheus: http://localhost:9090
+```
+
+### 6. Key Management
+
+Secure cryptographic key management with rotation scripts:
+
+| Key Type | Algorithm | Rotation Script |
+|----------|-----------|-----------------|
+| JWT Signing | RS256 (2048-bit) | `scripts/rotate_jwt_keys.sh` |
+| Token Encryption | AES-256-GCM | `scripts/rotate_encryption_key.sh` |
+| mTLS Certificates | X.509 | `scripts/renew_certificates.sh` |
+
+See [KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) for rotation procedures and compliance.
 
 ---
 
@@ -298,6 +369,7 @@ skylink/
 | [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) | Data flow diagrams, trust boundaries, security controls |
 | [docs/MONITORING.md](docs/MONITORING.md) | Security monitoring with Prometheus and Grafana |
 | [docs/KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) | Cryptographic key management, rotation procedures, compliance |
+| [docs/AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) | Audit event logging, security event tracking, compliance |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
@@ -354,6 +426,52 @@ poetry run pytest
 - [x] **Image Signing** — Cosign with SBOM attestation
 - [x] **Non-root Containers** — User `skylink:1000`
 - [x] **Secrets Management** — Environment variables, never in code
+
+---
+
+## Security Maturity
+
+This project aims for a **9+/10 Security by Design** rating. Current status:
+
+| Category | Status | Details |
+|----------|--------|---------|
+| **Threat Modeling** | Complete | STRIDE analysis, 30+ threats identified |
+| **Security Architecture** | Complete | DFD, trust boundaries, control mapping |
+| **Authentication** | Complete | JWT RS256 + mTLS cross-validation |
+| **Authorization** | Partial | Per-identity rate limiting (RBAC planned) |
+| **Monitoring & Alerting** | Complete | Prometheus + Grafana + 14 alert rules |
+| **Audit Logging** | Complete | 20 event types, JSON format, no PII |
+| **Key Management** | Complete | Rotation scripts, compliance docs |
+| **Supply Chain Security** | Complete | SBOM, image signing, vulnerability scanning |
+
+---
+
+## Learning Path
+
+New to this project? Follow this recommended learning path:
+
+```
+1. UNDERSTAND THE RISKS
+   └── Read docs/THREAT_MODEL.md
+       └── STRIDE analysis, threat scenarios
+
+2. EXPLORE THE ARCHITECTURE
+   └── Read docs/SECURITY_ARCHITECTURE.md
+       └── Data flow diagrams, trust boundaries
+
+3. HANDS-ON DEMO
+   └── Follow docs/DEMO.md step by step
+       └── JWT auth, rate limiting, idempotency
+
+4. DEEP DIVE INTO CODE
+   └── Explore skylink/ source code
+       └── Security comments explain each control
+
+5. REVIEW OPERATIONAL SECURITY
+   └── docs/MONITORING.md → Prometheus/Grafana
+   └── docs/AUDIT_LOGGING.md → Security events
+   └── docs/KEY_MANAGEMENT.md → Key rotation
+```
 
 ---
 
