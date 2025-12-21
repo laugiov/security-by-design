@@ -29,8 +29,8 @@ SkyLink is a connected aircraft services platform implemented following **Securi
 |  | (OWASP)          |  | (60 req/min/sub)  |  | (sign + verify)    |   |
 |  +------------------+  +-------------------+  +--------------------+   |
 |  +------------------+  +-------------------+  +--------------------+   |
-|  | Payload Limit    |  | JSON Logging      |  | mTLS Extraction    |   |
-|  | (64 KB max)      |  | (trace_id W3C)    |  | (CN validation)    |   |
+|  | RBAC             |  | Payload Limit     |  | mTLS Extraction    |   |
+|  | (5 roles, 7 perm)|  | (64 KB max)       |  | (CN validation)    |   |
 |  +------------------+  +-------------------+  +--------------------+   |
 +-----------------------------------------------------------------------+
          |                      |                      |
@@ -63,6 +63,7 @@ Single entry point of the platform. Centralizes authentication, validation, and 
 | Component | Responsibility | Implementation |
 |-----------|----------------|----------------|
 | **Auth JWT RS256** | Token issuance and verification | PyJWT, 2048-bit RSA keys |
+| **RBAC** | Role-based access control | 5 roles, 7 permissions, least privilege |
 | **Rate Limiting** | Abuse protection | slowapi, 60 req/min per aircraft_id |
 | **Security Headers** | OWASP protection | X-Content-Type-Options, X-Frame-Options, CSP |
 | **Payload Limit** | DoS protection | 64 KB max per request |

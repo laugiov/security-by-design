@@ -207,7 +207,7 @@ CI/CD pipeline with security gates at every stage:
 | **Ruff** | Python linting | lint |
 | **Black** | Code formatting | lint |
 | **Bandit** | SAST (security linting) | lint |
-| **pytest** | Unit tests (305 tests, 81% coverage) | test |
+| **pytest** | Unit tests (470+ tests, 81% coverage) | test |
 | **Trivy** | Container vulnerability scanning | scan |
 | **pip-audit** | Python dependency SCA | scan |
 | **Gitleaks** | Secret detection | scan |
@@ -375,6 +375,7 @@ skylink/
 | [docs/MONITORING.md](docs/MONITORING.md) | Security monitoring with Prometheus and Grafana |
 | [docs/KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) | Cryptographic key management, rotation procedures, compliance |
 | [docs/AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) | Audit event logging, security event tracking, compliance |
+| [docs/AUTHORIZATION.md](docs/AUTHORIZATION.md) | Role-Based Access Control (RBAC), permissions, role matrix |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |
@@ -409,7 +410,7 @@ make test
 poetry run pytest
 ```
 
-**305 tests** with **81% coverage** — covering authentication, rate limiting, input validation, idempotency, security headers, error handling, and service integration.
+**470+ tests** with **81% coverage** — covering authentication, RBAC authorization, rate limiting, input validation, idempotency, OWASP Top 10 security tests, security headers, error handling, and service integration.
 
 ---
 
@@ -418,8 +419,10 @@ poetry run pytest
 - [x] **Threat Modeling** — STRIDE analysis in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [x] **Strict Input Validation** — Pydantic `extra="forbid"`, reject unknown fields
 - [x] **JWT RS256 Authentication** — Short TTL (15 min), audience validation
+- [x] **RBAC Authorization** — 5 roles, 7 permissions, least privilege principle
 - [x] **mTLS Cross-Validation** — Certificate CN must match JWT subject
 - [x] **Rate Limiting** — Per-identity throttling with Prometheus counter
+- [x] **OWASP Top 10 Security Tests** — 97 tests covering injection, XSS, access control, etc.
 - [x] **Security Headers** — OWASP recommended set
 - [x] **Structured Logging** — JSON format, no PII, trace_id correlation
 - [x] **SAST** — Bandit security linting
@@ -443,7 +446,7 @@ This project aims for a **9+/10 Security by Design** rating. Current status:
 | **Threat Modeling** | Complete | STRIDE analysis, 30+ threats identified |
 | **Security Architecture** | Complete | DFD, trust boundaries, control mapping |
 | **Authentication** | Complete | JWT RS256 + mTLS cross-validation |
-| **Authorization** | Partial | Per-identity rate limiting (RBAC planned) |
+| **Authorization** | Complete | RBAC with 5 roles, 7 permissions, least privilege |
 | **Monitoring & Alerting** | Complete | Prometheus + Grafana + 14 alert rules |
 | **Audit Logging** | Complete | 20 event types, JSON format, no PII |
 | **Key Management** | Complete | Rotation scripts, compliance docs |

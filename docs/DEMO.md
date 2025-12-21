@@ -119,7 +119,116 @@ echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq
 
 ---
 
-## Demo 2: Telemetry with Idempotency
+## Demo 2: Role-Based Access Control (RBAC)
+
+> **Note**: SkyLink implements RBAC with 5 roles and 7 permissions. Each role has least-privilege access.
+
+### Step 2.1: Request Token with Role
+
+```bash
+# Get a token with aircraft_premium role (can access contacts)
+TOKEN_PREMIUM=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "aircraft_id": "550e8400-e29b-41d4-a716-446655440000",
+    "role": "aircraft_premium"
+  }' | jq -r '.access_token')
+
+echo "Premium token: ${TOKEN_PREMIUM:0:50}..."
+```
+
+### Step 2.2: Decode Token to See Role
+
+```bash
+echo $TOKEN_PREMIUM | cut -d'.' -f2 | base64 -d 2>/dev/null | jq
+```
+
+**Expected output**:
+```json
+{
+  "sub": "550e8400-e29b-41d4-a716-446655440000",
+  "aud": "skylink",
+  "iat": 1734600000,
+  "exp": 1734600900,
+  "role": "aircraft_premium"
+}
+```
+
+### Step 2.3: Access Contacts with Premium Role (200 OK)
+
+```bash
+curl -s "http://localhost:8000/contacts/?person_fields=names" \
+  -H "Authorization: Bearer $TOKEN_PREMIUM" | jq '.items | length'
+```
+
+**Expected output**:
+```
+5
+```
+
+### Step 2.4: Access Contacts with Standard Role (403 Forbidden)
+
+```bash
+# Get a token with default role (aircraft_standard - no contacts access)
+TOKEN_STANDARD=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"aircraft_id": "550e8400-e29b-41d4-a716-446655440001"}' | jq -r '.access_token')
+
+# Try to access contacts - should fail
+curl -s "http://localhost:8000/contacts/?person_fields=names" \
+  -H "Authorization: Bearer $TOKEN_STANDARD" -w "\nHTTP Status: %{http_code}\n"
+```
+
+**Expected output**:
+```json
+{
+  "detail": "Permission denied: contacts:read required"
+}
+HTTP Status: 403
+```
+
+### Step 2.5: Test Different Roles
+
+```bash
+# Ground control (read-only access)
+TOKEN_GC=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"aircraft_id": "550e8400-e29b-41d4-a716-446655440002", "role": "ground_control"}' \
+  | jq -r '.access_token')
+
+# Ground control CAN read contacts
+curl -s "http://localhost:8000/contacts/?person_fields=names" \
+  -H "Authorization: Bearer $TOKEN_GC" -o /dev/null -w "Contacts: HTTP %{http_code}\n"
+
+# Ground control CANNOT write telemetry
+curl -s -X POST http://localhost:8000/telemetry/ingest \
+  -H "Authorization: Bearer $TOKEN_GC" \
+  -H "Content-Type: application/json" \
+  -d '{"aircraft_id": "550e8400-e29b-41d4-a716-446655440002", "event_id": "test-001", "ts": "2025-01-01T00:00:00Z", "metrics": {"speed": 50}}' \
+  -o /dev/null -w "Telemetry: HTTP %{http_code}\n"
+```
+
+**Expected output**:
+```
+Contacts: HTTP 200
+Telemetry: HTTP 403
+```
+
+### Role-Permission Matrix
+
+| Role | weather:read | contacts:read | telemetry:write |
+|------|:------------:|:-------------:|:---------------:|
+| aircraft_standard | ✅ | ❌ | ✅ |
+| aircraft_premium | ✅ | ✅ | ✅ |
+| ground_control | ✅ | ✅ | ❌ |
+| maintenance | ✅ | ❌ | ✅ |
+| admin | ✅ | ✅ | ✅ |
+
+See [AUTHORIZATION.md](AUTHORIZATION.md) for complete documentation.
+
+---
+
+## Demo 3: Telemetry with Idempotency
 
 ### Step 2.1: Send an Event (201 Created)
 
