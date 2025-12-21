@@ -9,8 +9,56 @@
 [![Security](https://img.shields.io/badge/Security-SAST%20|%20SCA%20|%20DAST-blueviolet)](#cicd-security-pipeline)
 [![OWASP](https://img.shields.io/badge/OWASP-Headers%20Compliant-orange?logo=owasp&logoColor=white)](#4-owasp-security-headers)
 [![Docker](https://img.shields.io/badge/Docker-Rootless-2496ED?logo=docker&logoColor=white)](#quick-start)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm%20Ready-326CE5?logo=kubernetes&logoColor=white)](#kubernetes-deployment)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+---
+
+## Security Highlights
+
+<table>
+<tr>
+<td width="50%">
+
+**Authentication & Authorization**
+- JWT RS256 + mTLS mutual authentication
+- Cross-validation (Certificate CN = JWT subject)
+- RBAC with 5 roles, 7 permissions
+- Per-identity rate limiting (60 req/min)
+
+</td>
+<td width="50%">
+
+**DevSecOps Pipeline**
+- SAST (Bandit) + SCA (pip-audit, Trivy)
+- DAST (OWASP ZAP baseline)
+- SBOM generation (CycloneDX)
+- Image signing (Sigstore Cosign)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Privacy & Data Protection**
+- PII minimization (GPS rounding ~11m)
+- AES-256-GCM token encryption
+- Structured logging without sensitive data
+- Audit trail for compliance
+
+</td>
+<td>
+
+**Kubernetes Production-Ready**
+- Helm chart with Pod Security Restricted
+- NetworkPolicies (zero-trust)
+- External Secrets Operator support
+- HPA, PDB, ServiceMonitor
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -33,7 +81,7 @@ This project is a **reference implementation** designed to teach and demonstrate
 - **Complete stack**: From threat model to production-ready CI/CD
 - **Realistic scenario**: Aviation telemetry context with regulatory constraints
 - **Documented decisions**: Every security control is explained with rationale
-- **Testable**: 470+ tests demonstrating security behaviors
+- **Testable**: 478 tests demonstrating security behaviors
 - **Runnable**: Full Docker Compose stack for hands-on learning
 
 ---
@@ -207,7 +255,7 @@ CI/CD pipeline with security gates at every stage:
 | **Ruff** | Python linting | lint |
 | **Black** | Code formatting | lint |
 | **Bandit** | SAST (security linting) | lint |
-| **pytest** | Unit tests (470+ tests, 81% coverage) | test |
+| **pytest** | Unit tests (478 tests, 81% coverage) | test |
 | **Trivy** | Container vulnerability scanning | scan |
 | **pip-audit** | Python dependency SCA | scan |
 | **Gitleaks** | Secret detection | scan |
@@ -234,6 +282,29 @@ cosign verify-attestation \
   --type cyclonedx \
   ghcr.io/laugiov/security-by-design:latest
 ```
+
+---
+
+## Kubernetes Deployment
+
+Production-ready Helm chart with security best practices:
+
+```bash
+# Deploy to Kubernetes
+helm install skylink ./kubernetes/skylink \
+  --namespace skylink --create-namespace \
+  -f kubernetes/skylink/values-prod.yaml
+```
+
+| Security Feature | Implementation |
+|------------------|----------------|
+| **Pod Security** | Restricted profile (non-root, read-only fs, drop ALL capabilities) |
+| **Network Policies** | Zero-trust default deny, explicit allow rules |
+| **Secrets** | External Secrets Operator integration |
+| **Availability** | HPA (auto-scaling), PDB (disruption budget) |
+| **Observability** | ServiceMonitor for Prometheus Operator |
+
+See [docs/KUBERNETES.md](docs/KUBERNETES.md) for complete deployment guide.
 
 ---
 
@@ -414,7 +485,7 @@ make test
 poetry run pytest
 ```
 
-**470+ tests** with **81% coverage** — covering authentication, RBAC authorization, rate limiting, input validation, idempotency, OWASP Top 10 security tests, security headers, error handling, and service integration.
+**478 tests** with **81% coverage** — covering authentication, RBAC authorization, rate limiting, input validation, idempotency, OWASP Top 10 security tests, security headers, error handling, and service integration.
 
 ---
 
@@ -438,6 +509,7 @@ poetry run pytest
 - [x] **Image Signing** — Cosign with SBOM attestation
 - [x] **Non-root Containers** — User `skylink:1000`
 - [x] **Secrets Management** — Environment variables, never in code
+- [x] **Kubernetes Security** — Pod Security Restricted, NetworkPolicies, External Secrets
 
 ---
 
@@ -455,6 +527,7 @@ This project aims for a **9+/10 Security by Design** rating. Current status:
 | **Audit Logging** | Complete | 20 event types, JSON format, no PII |
 | **Key Management** | Complete | Rotation scripts, compliance docs |
 | **Supply Chain Security** | Complete | SBOM, image signing, vulnerability scanning |
+| **Kubernetes Security** | Complete | Helm chart, Pod Security, NetworkPolicies |
 
 ---
 
