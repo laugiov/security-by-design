@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skylink.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  {{- if not .Values.gateway.autoscaling.enabled }}
+  replicas: {{ .Values.gateway.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        {{- include "skylink.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+      annotations:
+        # Force rolling update when config changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "skylink.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "skylink.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: gateway
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          securityContext:
+            {{- include "skylink.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            {{- include "skylink.commonEnv" . | nindent 12 }}
+            {{- include "skylink.secretEnv" . | nindent 12 }}
+            # Service discovery
+            - name: TELEMETRY_SERVICE_URL
+              value: "http://{{ include "skylink.fullname" . }}-telemetry:8001"
+            - name: WEATHER_SERVICE_URL
+              value: "http://{{ include "skylink.fullname" . }}-weather:8002"
+            - name: CONTACTS_SERVICE_URL
+              value: "http://{{ include "skylink.fullname" . }}-contacts:8003"
+          {{- include "skylink.livenessProbe" . | nindent 10 }}
+          {{- include "skylink.readinessProbe" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "skylink.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "skylink.volumes" . | nindent 8 }}
+      {{- with .Values.gateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.gateway.affinity (not .Values.gateway.affinity) }}
+      affinity:
+        {{- if .Values.gateway.affinity }}
+        {{- toYaml .Values.gateway.affinity | nindent 8 }}
+        {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "skylink.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: gateway
+                topologyKey: kubernetes.io/hostname
+        {{- end }}
+      {{- end }}

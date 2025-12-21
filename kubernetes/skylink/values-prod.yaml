@@ -1,0 +1,136 @@
+# Production environment values
+# Usage: helm install skylink ./kubernetes/skylink -f kubernetes/skylink/values-prod.yaml
+#
+# IMPORTANT: Never store real secrets in this file!
+# Use External Secrets Operator, Sealed Secrets, or Vault.
+
+gateway:
+  replicaCount: 3
+  image:
+    repository: ghcr.io/skylink/gateway
+    tag: "1.0.0"  # Use specific version, never 'latest'
+    pullPolicy: IfNotPresent
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+telemetry:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+weather:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+contacts:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Enable network policies (REQUIRED for production)
+networkPolicy:
+  enabled: true
+
+# Production ingress with mTLS
+ingress:
+  enabled: true
+  className: nginx
+  host: api.skylink.example.com
+  annotations:
+    # Use cert-manager for automatic TLS
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Additional security
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"
+  mtls:
+    enabled: true
+    secretName: skylink-mtls-ca
+  tls:
+    enabled: true
+    secretName: skylink-prod-tls
+
+# Use external secrets manager (RECOMMENDED for production)
+# Set externalSecrets.enabled: true if External Secrets Operator is installed
+secrets:
+  create: false
+  externalSecrets:
+    enabled: false  # Enable if External Secrets Operator CRD is installed
+    secretStoreRef:
+      name: vault-backend
+      kind: ClusterSecretStore
+    refreshInterval: "30m"
+
+# Production config
+config:
+  jwtAudience: "skylink"
+  jwtExpiry: "900"  # 15 minutes
+  rateLimit: "60"
+  logLevel: "INFO"
+  demoMode: "false"
+
+# Enable PDB with higher availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Enable full monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    labels:
+      release: prometheus
+
+# Use managed PostgreSQL (not deployed with Helm)
+postgresql:
+  enabled: false
+
+# Production-grade settings
+global:
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+
+# Node affinity for production nodes
+# Uncomment and adjust for your cluster
+# gateway:
+#   nodeSelector:
+#     node-role.kubernetes.io/production: "true"
+#   tolerations:
+#     - key: "production"
+#       operator: "Equal"
+#       value: "true"
+#       effect: "NoSchedule"

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skylink.fullname" . }}-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: telemetry
+spec:
+  replicas: {{ .Values.telemetry.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: telemetry
+  template:
+    metadata:
+      labels:
+        {{- include "skylink.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: telemetry
+        # Label for network policy
+        app.kubernetes.io/tier: internal
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "skylink.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "skylink.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: telemetry
+          image: "{{ .Values.telemetry.image.repository }}:{{ .Values.telemetry.image.tag }}"
+          imagePullPolicy: {{ .Values.telemetry.image.pullPolicy }}
+          securityContext:
+            {{- include "skylink.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skylink.fullname" . }}-config
+                  key: LOG_LEVEL
+          {{- include "skylink.livenessProbe" . | nindent 10 }}
+          {{- include "skylink.readinessProbe" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.telemetry.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "skylink.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "skylink.volumes" . | nindent 8 }}
+      {{- with .Values.telemetry.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.telemetry.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "skylink.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: telemetry
+                topologyKey: kubernetes.io/hostname

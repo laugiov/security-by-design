@@ -1,0 +1,66 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+# Gateway PDB - ensure availability during node maintenance
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "skylink.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gateway
+---
+# Telemetry PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "skylink.fullname" . }}-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: telemetry
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: telemetry
+---
+# Weather PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "skylink.fullname" . }}-weather
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: weather
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: weather
+---
+# Contacts PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "skylink.fullname" . }}-contacts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contacts
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "skylink.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: contacts
+{{- end }}

@@ -1,0 +1,21 @@
+{{/*
+Namespace template is disabled by default to avoid conflicts with --create-namespace.
+To apply Pod Security Standards labels, use:
+  kubectl label namespace skylink \
+    pod-security.kubernetes.io/enforce=restricted \
+    pod-security.kubernetes.io/audit=restricted \
+    pod-security.kubernetes.io/warn=restricted
+
+Or enable this template by setting createNamespace: true in values.yaml
+*/}}
+{{- if .Values.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    {{- include "skylink.labels" . | nindent 4 }}
+    {{- with .Values.namespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

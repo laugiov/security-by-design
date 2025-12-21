@@ -1,0 +1,252 @@
+# Default values for skylink
+# This is a YAML-formatted file.
+
+# -- Override chart name
+nameOverride: ""
+# -- Full name override
+fullnameOverride: ""
+
+# -- Namespace labels for Pod Security Standards
+namespaceLabels:
+  pod-security.kubernetes.io/enforce: restricted
+  pod-security.kubernetes.io/audit: restricted
+  pod-security.kubernetes.io/warn: restricted
+
+# -- Global image settings
+global:
+  imagePullSecrets: []
+
+# =============================================================================
+# Gateway Configuration
+# =============================================================================
+gateway:
+  # -- Number of gateway replicas
+  replicaCount: 2
+  image:
+    # -- Gateway image repository
+    repository: ghcr.io/skylink/gateway
+    # -- Gateway image tag
+    tag: "latest"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  # -- Gateway resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # -- Gateway autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  # -- Gateway node selector
+  nodeSelector: {}
+  # -- Gateway tolerations
+  tolerations: []
+  # -- Gateway affinity rules
+  affinity: {}
+
+# =============================================================================
+# Telemetry Service Configuration
+# =============================================================================
+telemetry:
+  # -- Number of telemetry replicas
+  replicaCount: 2
+  image:
+    repository: ghcr.io/skylink/telemetry
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Weather Service Configuration
+# =============================================================================
+weather:
+  # -- Number of weather replicas
+  replicaCount: 2
+  image:
+    repository: ghcr.io/skylink/weather
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Contacts Service Configuration
+# =============================================================================
+contacts:
+  # -- Number of contacts replicas
+  replicaCount: 2
+  image:
+    repository: ghcr.io/skylink/contacts
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Service Account Configuration
+# =============================================================================
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account annotations
+  annotations: {}
+  # -- Service account name (auto-generated if empty)
+  name: ""
+
+# =============================================================================
+# Network Policies
+# =============================================================================
+networkPolicy:
+  # -- Enable network policies (recommended for production)
+  enabled: true
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  # -- Enable ingress
+  enabled: true
+  # -- Ingress class name
+  className: nginx
+  # -- Ingress host
+  host: skylink.example.com
+  # -- Additional ingress annotations
+  annotations: {}
+  # -- mTLS configuration
+  mtls:
+    # -- Enable mTLS on ingress
+    enabled: false
+    # -- Secret name containing CA certificate for client verification
+    secretName: skylink-mtls-ca
+  # -- TLS configuration
+  tls:
+    # -- Enable TLS
+    enabled: true
+    # -- Secret name for TLS certificate (auto-generated if using cert-manager)
+    secretName: ""
+
+# =============================================================================
+# Secrets Configuration
+# =============================================================================
+secrets:
+  # -- Create secrets (set to false to use external secrets manager)
+  create: false
+  # -- JWT private key (base64 encoded PEM)
+  jwtPrivateKey: ""
+  # -- JWT public key (base64 encoded PEM)
+  jwtPublicKey: ""
+  # -- AES-256 encryption key (hex encoded)
+  encryptionKey: ""
+  # -- External secrets configuration
+  externalSecrets:
+    # -- Enable External Secrets Operator integration
+    enabled: false
+    # -- Secret store reference
+    secretStoreRef:
+      name: vault-backend
+      kind: SecretStore
+    # -- Refresh interval
+    refreshInterval: "1h"
+
+# =============================================================================
+# ConfigMap Configuration
+# =============================================================================
+config:
+  # -- JWT audience
+  jwtAudience: "skylink"
+  # -- JWT expiry in seconds
+  jwtExpiry: "900"
+  # -- Rate limit (requests per minute)
+  rateLimit: "60"
+  # -- Log level
+  logLevel: "INFO"
+  # -- Demo mode for weather/contacts services
+  demoMode: "true"
+
+# =============================================================================
+# Pod Disruption Budget
+# =============================================================================
+podDisruptionBudget:
+  # -- Enable PDB
+  enabled: true
+  # -- Minimum available pods
+  minAvailable: 1
+
+# =============================================================================
+# Monitoring Configuration
+# =============================================================================
+monitoring:
+  # -- Enable monitoring integration
+  enabled: true
+  serviceMonitor:
+    # -- Create ServiceMonitor for Prometheus Operator
+    enabled: true
+    # -- Scrape interval
+    interval: 30s
+    # -- Additional labels for ServiceMonitor
+    labels: {}
+    # -- Namespace for ServiceMonitor (defaults to release namespace)
+    namespace: ""
+
+# =============================================================================
+# PostgreSQL Configuration (for contacts service)
+# =============================================================================
+postgresql:
+  # -- Enable PostgreSQL deployment
+  enabled: true
+  # -- PostgreSQL image
+  image:
+    repository: postgres
+    tag: "15-alpine"
+  # -- PostgreSQL resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  # -- PostgreSQL credentials (use external secrets in production)
+  auth:
+    database: skylink
+    username: skylink
+    # -- Password (MUST be set or use existing secret)
+    password: ""
+    existingSecret: ""

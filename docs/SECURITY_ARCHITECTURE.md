@@ -749,6 +749,35 @@ This architecture covers:
 | contacts | gateway | Google APIs (HTTPS), db:5432 |
 | db | contacts | None |
 
+### 9.3 Kubernetes Network Policies
+
+For production Kubernetes deployments, network policies enforce zero-trust networking:
+
+```yaml
+# Default: deny all traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: skylink-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+```
+
+**Kubernetes Network Policy Matrix**:
+
+| Policy | From | To | Ports | Purpose |
+|--------|------|-----|-------|---------|
+| `gateway-ingress` | ingress-nginx | gateway | 8000 | External access |
+| `gateway-egress` | gateway | internal services | 8001-8003 | Service routing |
+| `internal-ingress` | gateway | telemetry/weather/contacts | 8001-8003 | Internal traffic |
+| `internal-egress` | internal services | external APIs | 443 | API calls |
+| `prometheus-scrape` | monitoring namespace | all pods | 8000-8003 | Metrics collection |
+
+See [KUBERNETES.md](KUBERNETES.md) for full network policy configuration.
+
 ---
 
 ## 10. References
@@ -757,6 +786,7 @@ This architecture covers:
 
 - [THREAT_MODEL.md](THREAT_MODEL.md) - STRIDE threat analysis
 - [AUTHORIZATION.md](AUTHORIZATION.md) - RBAC roles and permissions
+- [KUBERNETES.md](KUBERNETES.md) - Kubernetes deployment with security policies
 - [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) - Technical implementation details
 
 ### 10.2 External References

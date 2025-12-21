@@ -1048,6 +1048,12 @@ Jobs:
 - [ ] Image signature verified (cosign verify)
 - [ ] SBOM attestation verified (cosign verify-attestation)
 
+### Kubernetes Deployment (Optional)
+- [ ] Helm chart installed (`helm install skylink ./kubernetes/skylink`)
+- [ ] All pods running (`kubectl get pods -n skylink`)
+- [ ] NetworkPolicies applied (`kubectl get networkpolicies -n skylink`)
+- [ ] Helm tests pass (`helm test skylink -n skylink`)
+
 ---
 
 ## Security Documentation
@@ -1061,6 +1067,8 @@ For a complete understanding of the security posture:
 | [MONITORING.md](MONITORING.md) | Security monitoring with Prometheus and Grafana |
 | [KEY_MANAGEMENT.md](KEY_MANAGEMENT.md) | Key rotation procedures and cryptographic inventory |
 | [AUDIT_LOGGING.md](AUDIT_LOGGING.md) | Audit event logging, security event tracking |
+| [AUTHORIZATION.md](AUTHORIZATION.md) | Role-Based Access Control (RBAC), permissions |
+| [KUBERNETES.md](KUBERNETES.md) | Kubernetes deployment with Helm chart |
 | [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) | Complete technical documentation with RRA compliance |
 
 ---

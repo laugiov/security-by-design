@@ -451,6 +451,32 @@ docker stats prometheus
 | Prometheus | 9090 | 9090 | HTTP |
 | Grafana | 3000 | 3000 | HTTP |
 
+## Appendix C: Kubernetes Monitoring
+
+For Kubernetes deployments, the Helm chart includes a ServiceMonitor for Prometheus Operator integration:
+
+```yaml
+# values.yaml
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    labels:
+      release: prometheus  # Must match Prometheus Operator selector
+```
+
+**Kubernetes Metrics Endpoints**:
+
+| Service | Path | Port |
+|---------|------|------|
+| Gateway | /metrics | 8000 |
+| Telemetry | /metrics | 8001 |
+| Weather | /metrics | 8002 |
+| Contacts | /metrics | 8003 |
+
+See [KUBERNETES.md](KUBERNETES.md) for full deployment guide.
+
 ---
 
 *Document maintained as part of SkyLink Security by Design implementation.*

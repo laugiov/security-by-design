@@ -353,8 +353,11 @@ skylink/
 ├── contacts/                # Contacts service (port 8003)
 ├── scripts/                 # PKI & utility scripts
 ├── tests/                   # Test suite
+├── kubernetes/              # Kubernetes Helm chart
+│   └── skylink/             # Helm chart with security policies
 ├── docs/                    # Documentation
 │   ├── DEMO.md              # Demo guide
+│   ├── KUBERNETES.md        # Kubernetes deployment guide
 │   ├── TECHNICAL_DOCUMENTATION.md  # Technical documentation
 │   ├── GITHUB_CI_SETUP.md   # GitHub Actions setup guide
 │   └── GITLAB_CI_SETUP.md   # GitLab CI/CD setup guide
@@ -376,6 +379,7 @@ skylink/
 | [docs/KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) | Cryptographic key management, rotation procedures, compliance |
 | [docs/AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md) | Audit event logging, security event tracking, compliance |
 | [docs/AUTHORIZATION.md](docs/AUTHORIZATION.md) | Role-Based Access Control (RBAC), permissions, role matrix |
+| [docs/KUBERNETES.md](docs/KUBERNETES.md) | Kubernetes deployment with Helm, security policies, operations |
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demonstration walkthrough |
 | [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md) | Complete technical documentation (architecture, security, RRA) |
 | [docs/GITHUB_CI_SETUP.md](docs/GITHUB_CI_SETUP.md) | GitHub Actions CI/CD setup guide (secrets, variables, workflow) |

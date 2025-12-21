@@ -214,6 +214,51 @@ skylink-net (bridge)
     Internet
 ```
 
+### 4.4 Kubernetes Deployment
+
+For production Kubernetes deployment, a Helm chart is available in `kubernetes/skylink/`.
+
+**Key Security Features**:
+
+| Feature | Implementation |
+|---------|----------------|
+| Pod Security Standards | Restricted profile enforced |
+| Non-root containers | `runAsUser: 1000` |
+| Read-only filesystem | `readOnlyRootFilesystem: true` |
+| Dropped capabilities | `drop: [ALL]` |
+| Network Policies | Zero-trust, deny-all default |
+| Service Account | `automountServiceAccountToken: false` |
+| Secrets Management | External Secrets Operator support |
+| mTLS Ingress | Optional client certificate verification |
+
+**Quick Start**:
+
+```bash
+# Development deployment
+helm install skylink ./kubernetes/skylink \
+  --namespace skylink \
+  --create-namespace \
+  -f kubernetes/skylink/values-dev.yaml \
+  --set secrets.jwtPrivateKey="$(cat keys/jwt.private)" \
+  --set secrets.jwtPublicKey="$(cat keys/jwt.public)" \
+  --set secrets.encryptionKey="$(openssl rand -hex 32)"
+
+# Production deployment (secrets pre-created)
+helm install skylink ./kubernetes/skylink \
+  --namespace skylink \
+  -f kubernetes/skylink/values-prod.yaml
+```
+
+**Environment Values Files**:
+
+| File | Replicas | Network Policies | Secrets | Autoscaling |
+|------|----------|------------------|---------|-------------|
+| `values-dev.yaml` | 1 | Disabled | In-cluster | Disabled |
+| `values-staging.yaml` | 2 | Enabled | External Secrets | Enabled (2-5) |
+| `values-prod.yaml` | 3+ | Enabled | External Secrets | Enabled (3-20) |
+
+See [KUBERNETES.md](KUBERNETES.md) for complete deployment guide.
+
 ---
 
 ## 5. CI/CD Pipeline
@@ -559,7 +604,9 @@ SkyLink/
 |-- docker-compose.yml       # Orchestration
 |-- Makefile                 # Utility commands
 |-- pyproject.toml           # Python dependencies
-+-- .gitlab-ci.yml           # CI/CD pipeline
+|-- .gitlab-ci.yml           # CI/CD pipeline
++-- kubernetes/              # Kubernetes Helm chart
+    +-- skylink/             # Helm chart with security policies
 ```
 
 ### 10.2 API Endpoints
