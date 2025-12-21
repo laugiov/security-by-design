@@ -540,10 +540,206 @@ rm /tmp/cosign.pub
 
 ---
 
+## Demo 10: Prometheus & Grafana Monitoring
+
+> **Note**: The monitoring stack is optional and uses Docker Compose profiles.
+
+### Step 10.1: Start the Monitoring Stack
+
+```bash
+# Start all services including monitoring
+docker compose --profile monitoring up -d
+
+# Verify monitoring services are running
+docker compose --profile monitoring ps
+```
+
+**Expected output**:
+```
+NAME        STATUS    PORTS
+gateway     Up        0.0.0.0:8000->8000/tcp
+telemetry   Up        8001/tcp
+weather     Up        8002/tcp
+contacts    Up        8003/tcp
+db          Up        5432/tcp
+prometheus  Up        0.0.0.0:9090->9090/tcp
+grafana     Up        0.0.0.0:3000->3000/tcp
+```
+
+### Step 10.2: Access Prometheus
+
+Open http://localhost:9090 in your browser.
+
+```bash
+# Verify Prometheus is scraping targets
+curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+```
+
+**Expected output**:
+```json
+{"job": "skylink-gateway", "health": "up"}
+{"job": "skylink-telemetry", "health": "up"}
+{"job": "skylink-weather", "health": "up"}
+{"job": "skylink-contacts", "health": "up"}
+{"job": "prometheus", "health": "up"}
+```
+
+### Step 10.3: Test Prometheus Queries
+
+```bash
+# Query total HTTP requests
+curl -s 'http://localhost:9090/api/v1/query?query=http_requests_total' | jq '.data.result | length'
+
+# Query authentication failures (401 responses)
+curl -s 'http://localhost:9090/api/v1/query?query=http_requests_total{status="401"}' | jq '.data.result'
+
+# Query request latency (p95)
+curl -s 'http://localhost:9090/api/v1/query?query=histogram_quantile(0.95,sum(rate(http_request_duration_seconds_bucket[5m]))by(le))' | jq '.data.result[0].value[1]'
+```
+
+### Step 10.4: Access Grafana Dashboard
+
+Open http://localhost:3000 in your browser.
+
+**Credentials**: `admin` / `admin`
+
+Navigate to: **Dashboards** → **SkyLink** → **SkyLink Security Dashboard**
+
+The dashboard includes:
+- Authentication Success Rate (gauge) - shows 100% when no auth failures
+- Client Errors by Status (pie chart) - shows "No data" if no 4xx errors (this is good!)
+- Authentication Failures (time series) - shows "No data" if no 401/403 (this is good!)
+- mTLS Failures (stat) - shows 0 if no mTLS errors
+- Rate Limited Requests (time series) - shows "No data" if no 429 (this is good!)
+- Request Latency p50/p95/p99 (time series) - requires traffic to display
+- Service Status (up/down indicators)
+
+> **Note**: Security panels showing "No data" is **expected behavior** when there are no security incidents. See [MONITORING.md](MONITORING.md#dashboard-shows-no-data) for details.
+
+### Step 10.5: Verify Alert Rules
+
+```bash
+# List all alert rules
+curl -s http://localhost:9090/api/v1/rules | jq '.data.groups[].rules[] | {name: .name, state: .state}'
+
+# Check for firing alerts
+curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.state=="firing")'
+```
+
+### Step 10.6: Generate Traffic for Dashboards
+
+```bash
+# Generate some traffic to see metrics
+for i in $(seq 1 20); do
+  curl -s http://localhost:8000/health > /dev/null
+  curl -s -X POST http://localhost:8000/auth/token \
+    -H "Content-Type: application/json" \
+    -d '{"aircraft_id": "550e8400-e29b-41d4-a716-446655440000"}' > /dev/null
+done
+
+echo "Traffic generated. Refresh Grafana dashboard to see metrics."
+```
+
+---
+
+## Demo 11: Key Rotation Scripts
+
+> **Note**: These scripts generate new cryptographic keys. They do NOT modify running services.
+
+### Step 11.1: JWT Key Rotation (Dry Run)
+
+```bash
+# Preview what the script will do
+./scripts/rotate_jwt_keys.sh --dry-run
+```
+
+**Expected output**:
+```
+╔══════════════════════════════════════════════════════════════╗
+║           SkyLink JWT Key Rotation Script                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+[INFO] Configuration:
+  Output Directory: /path/to/keys_new
+  Key Size:         2048 bits
+  ...
+  Dry Run:          true
+
+[WARNING] DRY RUN MODE - No keys will be generated
+
+Would perform the following actions:
+  1. Create directory: ./keys_new
+  2. Generate RSA private key (2048 bits)
+  3. Extract public key from private key
+  4. Create key ID file
+```
+
+### Step 11.2: Generate JWT Keys (Actual)
+
+```bash
+# Generate new JWT keys
+./scripts/rotate_jwt_keys.sh --output /tmp/jwt_demo_keys
+
+# View the generated files
+ls -la /tmp/jwt_demo_keys/
+```
+
+**Expected output**:
+```
+private.pem    (RSA private key - KEEP SECURE)
+public.pem     (RSA public key)
+kid.txt        (Key ID for JWKS)
+```
+
+### Step 11.3: Encryption Key Rotation
+
+```bash
+# Generate new AES-256 encryption key
+./scripts/rotate_encryption_key.sh --output /tmp/enc_demo_keys --env-format
+```
+
+**Expected output**:
+```
+╔══════════════════════════════════════════════════════════════╗
+║       SkyLink AES-256 Encryption Key Rotation Script          ║
+╚══════════════════════════════════════════════════════════════╝
+
+[SUCCESS] Encryption key generated
+[SUCCESS] Key length validation: OK (64 characters)
+
+# AES-256 Encryption Key
+ENCRYPTION_KEY="a1b2c3d4e5f6..."
+```
+
+### Step 11.4: Certificate Renewal (Dry Run)
+
+```bash
+# First, generate a CA if not exists
+./scripts/generate_ca.sh
+
+# Preview server certificate renewal
+./scripts/renew_certificates.sh --dry-run server
+
+# Preview client certificate renewal
+./scripts/renew_certificates.sh --dry-run client aircraft-001
+```
+
+### Step 11.5: Cleanup Demo Keys
+
+```bash
+# Remove demo keys (NEVER commit these to git)
+rm -rf /tmp/jwt_demo_keys /tmp/enc_demo_keys
+```
+
+---
+
 ## Cleanup
 
 ```bash
-# Stop services
+# Stop all services (including monitoring if started)
+docker compose --profile monitoring down
+
+# Or just stop core services
 make down
 
 # Remove everything (containers, volumes, images)
@@ -601,16 +797,30 @@ Jobs:
 
 ## Demo Checklist
 
-- [ ] Stack started (`make up`)
+### Core Functionality
+- [ ] Stack started (`make up` or `docker compose up -d`)
 - [ ] Health check OK (`make health`)
 - [ ] JWT token obtained
 - [ ] Telemetry 201 Created
 - [ ] Idempotency 200 OK (duplicate)
 - [ ] Conflict 409 (different data)
 - [ ] Rate limit 429
-- [ ] Metrics /metrics
+- [ ] Metrics /metrics accessible
 - [ ] Security headers present
 - [ ] Strict validation (extra fields rejected)
+
+### Monitoring (Optional)
+- [ ] Monitoring stack started (`docker compose --profile monitoring up -d`)
+- [ ] Prometheus targets healthy (http://localhost:9090/targets)
+- [ ] Grafana dashboard accessible (http://localhost:3000)
+- [ ] Alert rules loaded
+
+### Key Rotation Scripts
+- [ ] JWT rotation dry-run works (`./scripts/rotate_jwt_keys.sh --dry-run`)
+- [ ] Encryption key rotation works (`./scripts/rotate_encryption_key.sh --dry-run`)
+- [ ] Certificate renewal works (`./scripts/renew_certificates.sh --dry-run server`)
+
+### Supply Chain Security (CI/CD)
 - [ ] Image signature verified (cosign verify)
 - [ ] SBOM attestation verified (cosign verify-attestation)
 
@@ -624,6 +834,8 @@ For a complete understanding of the security posture:
 |----------|-------------|
 | [THREAT_MODEL.md](THREAT_MODEL.md) | STRIDE-based threat analysis covering 30+ threats |
 | [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) | Data flow diagrams with trust boundaries |
+| [MONITORING.md](MONITORING.md) | Security monitoring with Prometheus and Grafana |
+| [KEY_MANAGEMENT.md](KEY_MANAGEMENT.md) | Key rotation procedures and cryptographic inventory |
 | [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) | Complete technical documentation with RRA compliance |
 
 ---

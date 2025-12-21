@@ -69,3 +69,6 @@ local/*
 
 # mTLS Certificates (SECRETS - NEVER COMMIT!)
 certs/
+
+# Key rotation output (SECRETS - NEVER COMMIT!)
+keys_new/
