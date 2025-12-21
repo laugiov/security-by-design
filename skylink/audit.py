@@ -22,13 +22,13 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from skylink.audit_events import (
+    EVENT_METADATA,
     ActorType,
     EventCategory,
     EventOutcome,
     EventSeverity,
     EventType,
     ResourceType,
-    EVENT_METADATA,
 )
 
 
