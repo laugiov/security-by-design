@@ -1,10 +1,12 @@
-# SkyLink — Security by Design Reference Implementation
+# SkyLink: Security by Design Reference Implementation
 
 > A **microservices** platform demonstrating **Security by Design** principles for connected aviation telemetry systems.
 
+This project started as a way to consolidate security patterns I've used across different organizations. Instead of writing another "how to secure your API" article, I wanted a working codebase where every control can be tested and verified. The aviation telemetry scenario is fictional, but the security implementation is production-grade.
+
 ## TL;DR
 
-**What this proves:** End-to-end Security Engineering — from threat model to signed container in production-ready Kubernetes, with full observability and audit trail.
+**What this proves:** End-to-end Security Engineering, from threat model to signed container in production-ready Kubernetes, with full observability and audit trail.
 
 **Evaluate in 15 minutes:**
 1. **Threat Model** → [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (STRIDE, 30+ threats, mitigations)
@@ -82,7 +84,7 @@
 
 ## Why This Project?
 
-A **production-grade reference implementation** demonstrating how to embed Security by Design into a microservices architecture. Every pattern, control, and pipeline stage is designed for real-world adoption.
+I built this to show how Security by Design actually works in practice. Not just documentation, but working code with real security controls you can run and test.
 
 **Who is this for?**
 
@@ -94,10 +96,9 @@ A **production-grade reference implementation** demonstrating how to embed Secur
 
 **What makes it different?**
 
-- **Production patterns**: Secure defaults, operational readiness, not just documentation
-- **Complete lifecycle**: Threat model → code → test → build → deploy → monitor
-- **Evidence-based**: Every control has corresponding tests and audit events
-- **Runnable**: Full Docker Compose + Kubernetes Helm chart
+- It runs. Docker Compose + Kubernetes Helm chart, not just diagrams
+- Security controls have tests. 478 of them, including OWASP Top 10 scenarios
+- Covers the full lifecycle: threat model through signed container
 
 ---
 
@@ -562,17 +563,13 @@ poetry run pytest
 
 ## Portability
 
-While built around an aviation telemetry scenario, all security controls are **directly reusable** for:
+The aviation scenario is just a context. The patterns work for any API-based system:
 
-| Domain | Applicable Controls |
-|--------|---------------------|
-| **SaaS B2B / API Platform** | JWT auth, RBAC, rate limiting, audit trail, supply chain security |
-| **Fintech / Regulated** | Threat model, key rotation, encryption at rest, compliance logging |
-| **IAM / Identity Platform** | mTLS, OAuth integration, RBAC matrix, audit events |
-| **Marketplace / Multi-tenant** | Tenant isolation (NetworkPolicies), per-identity rate limiting |
-| **Healthcare / HIPAA** | PII minimization, encryption, audit trail, access control |
-
-The architecture patterns, CI/CD gates, and operational practices transfer directly to any API-based microservices environment.
+| Domain | Relevant Controls |
+|--------|-------------------|
+| **SaaS / API Platform** | JWT auth, RBAC, rate limiting, audit trail |
+| **Fintech / Regulated** | Threat model, key rotation, encryption, compliance logging |
+| **Multi-tenant** | NetworkPolicies for isolation, per-identity rate limiting |
 
 ---
 
@@ -611,24 +608,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Author
 
-**Laurent Giovannoni** — 20+ years scaling SaaS platforms as CTO/VP Engineering
+**Laurent Giovannoni**, 20+ years scaling SaaS platforms as CTO/VP Engineering
 
-This project demonstrates how I approach **Security Engineering at scale**:
-- Embedding security gates into CI/CD without blocking velocity
-- Designing RBAC and IAM patterns that scale with organizational growth
-- Building observable, auditable systems that satisfy compliance requirements
-- Making security decisions explicit and traceable (threat model → control → test → evidence)
+This reflects how I approach security in practice: CI/CD gates that don't block developers, RBAC that scales, observable systems that auditors can actually verify. I've done this work across multiple organizations. The patterns here come from real production experience, not just theory.
 
-Beyond code, I bring experience in security design reviews, cross-team influence, and building security culture in engineering organizations.
-
-> **Security issues?** See [SECURITY.md](SECURITY.md) — please use GitHub Security Advisories, not LinkedIn.
+> **Security issues?** See [SECURITY.md](SECURITY.md). Please use GitHub Security Advisories, not LinkedIn.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-<p align="center">
-  <em>Built with Security by Design principles</em>
-</p>
