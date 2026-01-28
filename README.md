@@ -23,6 +23,8 @@ This project started as a way to consolidate security patterns I've used across 
 ---
 
 [![CI](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml/badge.svg)](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/Tests-478%20passed-success?logo=pytest&logoColor=white)](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/laugiov/security-by-design/branch/main/graph/badge.svg)](https://codecov.io/gh/laugiov/security-by-design)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#technology-stack)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120-009688?logo=fastapi&logoColor=white)](#technology-stack)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
@@ -257,6 +259,11 @@ See [KEY_MANAGEMENT.md](docs/KEY_MANAGEMENT.md) for rotation procedures and comp
 CI/CD pipeline with security gates at every stage:
 - **GitHub Actions**: [.github/workflows/ci.yml](.github/workflows/ci.yml) — See [setup guide](docs/GITHUB_CI_SETUP.md)
 - **GitLab CI**: [.gitlab-ci.yml](.gitlab-ci.yml) — See [setup guide](docs/GITLAB_CI_SETUP.md)
+
+**Pipeline Results & Reports:**
+| Platform | Status | Coverage | Details |
+|----------|--------|----------|---------|
+| GitHub Actions | [![CI](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml/badge.svg)](https://github.com/laugiov/security-by-design/actions/workflows/ci.yml) | [![Coverage](https://codecov.io/gh/laugiov/security-by-design/branch/main/graph/badge.svg)](https://codecov.io/gh/laugiov/security-by-design) | [View Runs](https://github.com/laugiov/security-by-design/actions) |
 
 ```
 ┌───────┐   ┌───────┐   ┌───────┐   ┌───────┐   ┌───────┐   ┌───────────────┐   ┌───────┐
